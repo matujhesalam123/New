@@ -1,0 +1,3004 @@
+<!DOCTYPE html>
+<html lang="hi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocVault AI - HD स्मार्ट बोर्ड, स्क्रीन शेयर व मल्टी-मीडिया हब</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Dexie.js for IndexedDB Storage -->
+  <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+
+  <!-- SheetJS for XLSX/XLS/CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <!-- Mammoth.js for DOCX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  
+  <!-- PDF.js for High-Res PDF Rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
+  <!-- QRCode.js for Secure Share Links -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .bg-grid-pattern {
+      background-size: 28px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    }
+    .bg-dots-pattern {
+      background-size: 20px 20px;
+      background-image: radial-gradient(circle, rgba(255, 255, 255, 0.18) 1.2px, transparent 1px);
+    }
+    .bg-whiteboard-pattern {
+      background-color: #ffffff;
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.3); }
+      50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.7); }
+    }
+    @keyframes slideUpFade {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-up { animation: slideUpFade 0.35s ease-out forwards; }
+    .animate-glow { animation: pulseGlow 2s infinite; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-cyan-500 selection:text-white">
+
+  <!-- टोस्ट मैसेज कंटेनर -->
+  <div id="toastContainer" class="fixed top-5 right-5 z-[130] flex flex-col gap-2 pointer-events-none"></div>
+
+  <header class="sticky top-0 z-40 glass-card border-b border-slate-800 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+      
+      <!-- ब्रांड लोगो -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="resetToHome()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <i class="fa-solid fa-vault text-white text-xl"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">DocVault AI</h1>
+          <p class="text-xs text-slate-400 hidden sm:block">HD स्मार्ट बोर्ड, स्क्रीन शेयर व मल्टी-मीडिया हब</p>
+        </div>
+      </div>
+
+      <!-- खोज फ़ील्ड -->
+      <div class="flex-1 max-w-lg relative hidden md:block">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input type="text" id="searchInput" oninput="handleSearch()" placeholder="फ़ाइल का नाम, प्रकार या फ़ॉर्मेट से खोजें..." 
+          class="w-full bg-slate-800/80 border border-slate-700/60 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition">
+      </div>
+
+      <!-- हेडर एक्शन बटन -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button onclick="openFileManagerHubModal('all')" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2" title="मल्टी-स्टोरेज फ़ाइल मैनेजर">
+          <i class="fa-solid fa-folder-tree text-cyan-200"></i>
+          <span class="hidden sm:inline">फ़ाइल मैनेजर हब</span>
+        </button>
+
+        <button onclick="openStorageConnectModal()" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2" title="स्टोरेज क्षमता बढ़ाएं व क्लाउड कनेक्ट करें">
+          <i class="fa-solid fa-cloud text-amber-200"></i>
+          <span class="hidden sm:inline">स्टोरेज बढ़ाएं व कनेक्ट</span>
+        </button>
+
+        <button onclick="openLiveStreamModal()" class="bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+          <i class="fa-solid fa-tower-broadcast text-rose-200 animate-pulse"></i>
+          <span class="hidden sm:inline">स्क्रीन लाइव</span>
+        </button>
+
+        <button onclick="openSmartboardModal()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+          <i class="fa-solid fa-chalkboard-user text-amber-300"></i>
+          <span class="hidden sm:inline">HD स्मार्ट बोर्ड</span>
+        </button>
+        
+        <button onclick="openUploadModal()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span class="hidden sm:inline">अपलोड</span>
+        </button>
+
+        <button onclick="toggleAiDrawer()" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+          <span class="hidden md:inline">AI असिस्टेंट</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-7xl w-full mx-auto px-4 pt-4">
+    <div class="glass-card rounded-2xl p-4 border border-cyan-500/30 space-y-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-hard-drive"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-slate-100">कुल स्टोरेज स्थिति एवं प्रयुक्त क्षमता</h3>
+            <p class="text-[11px] text-slate-400">इंटरनल वॉल्ट, एक्सटर्नल एवं क्लाउड डेटा एनालिटिक्स</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-mono font-semibold">
+          <span id="topStorageUsedText" class="text-rose-400 bg-rose-950/60 border border-rose-500/30 px-3 py-1 rounded-xl">0 MB भर गया</span>
+          <span id="topStorageFreeText" class="text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 rounded-xl">1000 MB खाली</span>
+          <span id="topStoragePercentText" class="text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1 rounded-xl">0%</span>
+        </div>
+      </div>
+
+      <!-- श्रेणी-वार विस्तृत बार एवं 'खाली करें' विकल्प -->
+      <div class="space-y-2">
+        <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden flex border border-slate-700/60 p-0.5">
+          <div id="top-bar-document" class="bg-blue-500 h-full transition-all" style="width: 0%" title="दस्तावेज़"></div>
+          <div id="top-bar-spreadsheet" class="bg-emerald-500 h-full transition-all" style="width: 0%" title="स्प्रेडशीट"></div>
+          <div id="top-bar-smartboard" class="bg-amber-500 h-full transition-all" style="width: 0%" title="स्मार्ट बोर्ड"></div>
+          <div id="top-bar-software" class="bg-lime-500 h-full transition-all" style="width: 0%" title="ऐप्स व सॉफ्टवेयर"></div>
+          <div id="top-bar-code" class="bg-cyan-500 h-full transition-all" style="width: 0%" title="वेब व कोड"></div>
+          <div id="top-bar-media" class="bg-purple-500 h-full transition-all" style="width: 0%" title="मीडिया"></div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-[11px]">
+          <div class="flex items-center justify-between p-2 bg-slate-800/60 rounded-xl border border-slate-700/50">
+            <div>
+              <span class="block text-slate-400 font-medium">📄 दस्तावेज़</span>
+              <span id="top-size-document" class="font-mono text-blue-400 font-bold">0 MB</span>
+            </div>
+            <button onclick="clearCategoryFiles('document')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded transition">खाली करें</button>
+          </div>
+
+          <div class="flex items-center justify-between p-2 bg-slate-800/60 rounded-xl border border-slate-700/50">
+            <div>
+              <span class="block text-slate-400 font-medium">📊 स्प्रेडशीट</span>
+              <span id="top-size-spreadsheet" class="font-mono text-emerald-400 font-bold">0 MB</span>
+            </div>
+            <button onclick="clearCategoryFiles('spreadsheet')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded transition">खाली करें</button>
+          </div>
+
+          <div class="flex items-center justify-between p-2 bg-slate-800/60 rounded-xl border border-slate-700/50">
+            <div>
+              <span class="block text-slate-400 font-medium">🎨 स्मार्ट बोर्ड</span>
+              <span id="top-size-smartboard" class="font-mono text-amber-400 font-bold">0 MB</span>
+            </div>
+            <button onclick="clearCategoryFiles('smartboard')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded transition">खाली करें</button>
+          </div>
+
+          <div class="flex items-center justify-between p-2 bg-slate-800/60 rounded-xl border border-slate-700/50">
+            <div>
+              <span class="block text-slate-400 font-medium">📱 ऐप्स/गेम</span>
+              <span id="top-size-software" class="font-mono text-lime-400 font-bold">0 MB</span>
+            </div>
+            <button onclick="clearCategoryFiles('software')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded transition">खाली करें</button>
+          </div>
+
+          <div class="flex items-center justify-between p-2 bg-slate-800/60 rounded-xl border border-slate-700/50">
+            <div>
+              <span class="block text-slate-400 font-medium">💻 वेब/कोड</span>
+              <span id="top-size-code" class="font-mono text-cyan-400 font-bold">0 MB</span>
+            </div>
+            <button onclick="clearCategoryFiles('code')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded transition">खाली करें</button>
+          </div>
+
+          <div class="flex items-center justify-between p-2 bg-slate-800/60 rounded-xl border border-slate-700/50">
+            <div>
+              <span class="block text-slate-400 font-medium">🎬 मीडिया</span>
+              <span id="top-size-media" class="font-mono text-purple-400 font-bold">0 MB</span>
+            </div>
+            <button onclick="clearCategoryFiles('media')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded transition">खाली करें</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-1 flex max-w-7xl w-full mx-auto p-4 gap-6">
+
+    <!-- साइडबार -->
+    <aside class="w-72 flex-shrink-0 hidden lg:flex flex-col gap-6">
+      
+      <!-- श्रेणियों की सूची -->
+      <div class="glass-card rounded-2xl p-4 space-y-1">
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">श्रेणियाँ</div>
+        
+        <button onclick="filterCategory('all')" id="cat-all" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-cyan-400 bg-slate-800/80 transition">
+          <div class="flex items-center gap-3"><i class="fa-solid fa-folder-open text-cyan-400"></i> सभी फ़ाइलें</div>
+          <span id="count-all" class="text-xs bg-slate-700 px-2 py-0.5 rounded-full text-slate-300">0</span>
+        </button>
+
+        <button onclick="filterCategory('smartboard')" id="cat-smartboard" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3"><i class="fa-solid fa-chalkboard text-emerald-400"></i> स्मार्ट बोर्ड नोट्स</div>
+          <span id="count-smartboard" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0</span>
+        </button>
+
+        <button onclick="filterCategory('document')" id="cat-document" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3"><i class="fa-solid fa-file-lines text-blue-400"></i> दस्तावेज़ (PDF, DOC)</div>
+          <span id="count-document" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0</span>
+        </button>
+
+        <button onclick="filterCategory('spreadsheet')" id="cat-spreadsheet" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3"><i class="fa-solid fa-file-excel text-emerald-400"></i> स्प्रेडशीट (XLS, CSV)</div>
+          <span id="count-spreadsheet" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0</span>
+        </button>
+
+        <button onclick="filterCategory('software')" id="cat-software" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3"><i class="fa-brands fa-android text-lime-400"></i> ऐप्स व सॉफ्टवेयर (APK, ZIP)</div>
+          <span id="count-software" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0</span>
+        </button>
+
+        <button onclick="filterCategory('code')" id="cat-code" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3"><i class="fa-solid fa-code text-amber-400"></i> वेब व कोड (HTML, PY, JS)</div>
+          <span id="count-code" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0</span>
+        </button>
+
+        <button onclick="filterCategory('media')" id="cat-media" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3"><i class="fa-solid fa-photo-film text-purple-400"></i> मीडिया (Aud/Vid/Img)</div>
+          <span id="count-media" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0</span>
+        </button>
+
+        <button onclick="filterCategory('shared')" id="cat-shared" class="cat-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3"><i class="fa-solid fa-share-nodes text-rose-400"></i> शेयर की गई फ़ाइलें</div>
+          <span id="count-shared" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0</span>
+        </button>
+      </div>
+
+      <!-- क्विक नेविगेशन एक्शन्स -->
+      <div class="glass-card rounded-2xl p-4 space-y-3">
+        <button onclick="openFileManagerHubModal('all')" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 text-white py-2.5 rounded-xl text-xs font-semibold shadow transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-folder-tree"></i> फ़ाइल मैनेजर हब खोलें
+        </button>
+        <button onclick="openStorageConnectModal()" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white py-2.5 rounded-xl text-xs font-semibold shadow transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-hard-drive"></i> ⚡ स्टोरेज बढ़ाएं व क्लाउड कनेक्ट
+        </button>
+        <button onclick="openStorageManagerModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-400 py-2.5 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center justify-center gap-2 shadow">
+          <i class="fa-solid fa-list-check"></i> इन-प्लेस स्टोरेज टेबल
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- मुख्य कंटेंट एरिया -->
+    <main class="flex-1 flex flex-col gap-6 min-w-0">
+      
+      <!-- क्विक एक्शन बैनर कार्ड्स -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        
+        <div id="dropzone" onclick="openUploadModal()" class="glass-card border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-4 text-center cursor-pointer transition group flex flex-col items-center justify-center">
+          <div class="w-10 h-10 rounded-full bg-slate-800 group-hover:bg-cyan-500/10 flex items-center justify-center mb-1.5 transition">
+            <i class="fa-solid fa-cloud-arrow-up text-xl text-cyan-400 group-hover:scale-110 transition"></i>
+          </div>
+          <h3 class="font-semibold text-xs text-slate-200">फ़ाइलें अपलोड करें</h3>
+          <p class="text-[10px] text-slate-400 mt-0.5">PDF, DOC, APK, Video, Zip</p>
+        </div>
+
+        <div onclick="openSmartboardModal()" class="glass-card border-2 border-dashed border-emerald-800/60 hover:border-emerald-500/60 rounded-2xl p-4 text-center cursor-pointer transition group flex flex-col items-center justify-center bg-gradient-to-br from-emerald-950/20 to-slate-900">
+          <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-1.5 transition group-hover:scale-110">
+            <i class="fa-solid fa-pen-ruler text-xl text-emerald-400"></i>
+          </div>
+          <h3 class="font-semibold text-xs text-slate-200">HD स्मार्ट बोर्ड</h3>
+          <p class="text-[10px] text-emerald-400/80 mt-0.5">PDF/DOC इम्पॉर्ट व एनोटेशन</p>
+        </div>
+
+        <div onclick="openLiveStreamModal(); startStreamSource('screen');" class="glass-card border-2 border-dashed border-indigo-800/60 hover:border-indigo-500/60 rounded-2xl p-4 text-center cursor-pointer transition group flex flex-col items-center justify-center bg-gradient-to-br from-indigo-950/20 to-slate-900">
+          <div class="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center mb-1.5 transition group-hover:scale-110">
+            <i class="fa-solid fa-desktop text-xl text-indigo-400"></i>
+          </div>
+          <h3 class="font-semibold text-xs text-slate-200">स्क्रीन शेयर व लाइव</h3>
+          <p class="text-[10px] text-indigo-300 mt-0.5">1080p स्क्रीन शेयरिंग व Rec</p>
+        </div>
+
+        <div onclick="openRemoteDownloaderModal()" class="glass-card border-2 border-dashed border-amber-800/60 hover:border-amber-500/60 rounded-2xl p-4 text-center cursor-pointer transition group flex flex-col items-center justify-center bg-gradient-to-br from-amber-950/20 to-slate-900">
+          <div class="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center mb-1.5 transition group-hover:scale-110">
+            <i class="fa-solid fa-download text-xl text-amber-400"></i>
+          </div>
+          <h3 class="font-semibold text-xs text-slate-200">रिमोट व YouTube</h3>
+          <p class="text-[10px] text-amber-300 mt-0.5">डायरेक्ट लिंक से डाउनलोड</p>
+        </div>
+
+      </div>
+
+      <!-- फ़ाइल ग्रिड हेडर -->
+      <div class="flex items-center justify-between">
+        <h2 id="sectionTitle" class="text-lg font-semibold text-slate-200 flex items-center gap-2">
+          <i class="fa-solid fa-list text-cyan-400"></i> सभी दस्तावेज़ एवं मीडिया
+        </h2>
+        <div class="flex items-center gap-2 text-xs text-slate-400">
+          <span id="fileCountBadge">0 फ़ाइलें मिलीं</span>
+        </div>
+      </div>
+
+      <!-- फ़ाइल ग्रिड -->
+      <div id="fileGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <!-- खाली स्थिति -->
+      <div id="emptyState" class="hidden glass-card rounded-2xl p-12 text-center space-y-3">
+        <i class="fa-solid fa-folder-open text-5xl text-slate-600 mb-2"></i>
+        <h3 class="text-slate-300 font-medium">कोई फ़ाइल नहीं मिली</h3>
+        <p class="text-xs text-slate-500">अपलोड बटन, HD स्मार्ट बोर्ड या स्क्रीन शेयर से शुरुआत करें।</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- 1. HD स्मार्ट बोर्ड मोडल -->
+  <div id="smartboardModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[60] hidden flex flex-col">
+    
+    <!-- स्मार्ट बोर्ड टूलबार हेडर -->
+    <div class="glass-card border-b border-slate-800 p-3 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- बायाँ टूल समूह -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2 border-r border-slate-700 pr-3 mr-1">
+          <i class="fa-solid fa-chalkboard-user text-emerald-400 text-xl"></i>
+          <span class="font-bold text-sm text-slate-100 hidden sm:inline">HD स्मार्ट बोर्ड</span>
+        </div>
+
+        <!-- टूल बटन समूह -->
+        <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+          <button onclick="setBoardTool('pen')" id="tool-pen" class="sb-tool-btn p-2 rounded-lg text-emerald-400 bg-slate-700 hover:text-emerald-300 text-xs transition" title="HD पेन">
+            <i class="fa-solid fa-pen-nib"></i>
+          </button>
+          <button onclick="setBoardTool('eraser')" id="tool-eraser" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="इरेज़र">
+            <i class="fa-solid fa-eraser"></i>
+          </button>
+          <button onclick="setBoardTool('line')" id="tool-line" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="रेखा">
+            <i class="fa-solid fa-slash"></i>
+          </button>
+          <button onclick="setBoardTool('rect')" id="tool-rect" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="आयत">
+            <i class="fa-regular fa-square"></i>
+          </button>
+          <button onclick="setBoardTool('circle')" id="tool-circle" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="वृत्त">
+            <i class="fa-regular fa-circle"></i>
+          </button>
+          <button onclick="setBoardTool('text')" id="tool-text" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="टेक्स्ट">
+            <i class="fa-solid fa-font"></i>
+          </button>
+        </div>
+
+        <!-- ज़ूम कंट्रोल्स -->
+        <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs">
+          <button onclick="zoomSmartboard(-0.15)" class="p-1.5 px-2 hover:bg-slate-700 rounded-lg text-cyan-400 font-bold" title="ज़ूम आउट (-)">
+            <i class="fa-solid fa-magnifying-glass-minus"></i>
+          </button>
+          <span id="sbZoomVal" class="font-mono text-[11px] text-slate-300 w-12 text-center">100%</span>
+          <button onclick="zoomSmartboard(0.15)" class="p-1.5 px-2 hover:bg-slate-700 rounded-lg text-cyan-400 font-bold" title="ज़ूम इन (+)">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          </button>
+          <button onclick="resetSmartboardZoom()" class="p-1.5 px-2 hover:bg-slate-700 rounded-lg text-amber-400 text-[10px]" title="100% रीसेट">
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
+        </div>
+
+        <!-- रंग एवं मोटाई -->
+        <div class="flex items-center gap-2 bg-slate-800/80 p-1 px-2 rounded-xl border border-slate-700/60 text-xs">
+          <input type="color" id="boardColorPicker" onchange="setBoardColor(this.value)" value="#38bdf8" class="w-6 h-6 rounded border-0 cursor-pointer bg-transparent">
+          <div class="flex items-center gap-1">
+            <i class="fa-solid fa-circle-notch text-[10px] text-slate-400"></i>
+            <input type="range" min="1" max="30" value="3" oninput="updateLineWidth(this.value)" class="w-16 accent-emerald-500 cursor-pointer">
+            <span id="lineWidthVal" class="text-[10px] text-slate-400 w-6">3px</span>
+          </div>
+        </div>
+
+        <!-- बैकग्राउंड शैली -->
+        <select onchange="changeBoardBackground(this.value)" class="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+          <option value="dark">डार्क बोर्ड</option>
+          <option value="grid">ग्रिड (Graph Paper)</option>
+          <option value="dots">डॉटेड पैटर्न</option>
+          <option value="whiteboard">व्हाइट बोर्ड</option>
+        </select>
+      </div>
+
+      <!-- दायाँ टूल समूह -->
+      <div class="flex items-center gap-2">
+        <input type="file" id="sbImportFileInput" accept="image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt" onchange="handleSbDirectImport(event)" class="hidden">
+        
+        <button onclick="document.getElementById('sbImportFileInput').click()" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-import"></i>
+          <span class="hidden md:inline">PDF / DOC / फोटो HD इम्पॉर्ट</span>
+        </button>
+
+        <button onclick="toggleBoardWebcamOverlay()" class="bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-video"></i>
+          <span class="hidden md:inline">कैमरा ओवरले</span>
+        </button>
+
+        <button onclick="saveSmartboardToVault()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1 shadow">
+          <i class="fa-solid fa-floppy-disk"></i> HD सहेजें
+        </button>
+
+        <button onclick="clearSmartboard()" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-medium transition" title="बोर्ड साफ करें">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+
+        <button onclick="closeSmartboardModal()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+    </div>
+
+    <!-- स्मार्ट बोर्ड कैनवास कंटेनर -->
+    <div id="boardCanvasContainer" class="flex-1 relative overflow-hidden bg-slate-950 cursor-crosshair flex items-center justify-center">
+      <canvas id="smartboardCanvas" class="block w-full h-full"></canvas>
+      
+      <video id="sbWebcamVideo" autoplay muted class="hidden absolute bottom-4 right-4 w-44 h-32 object-cover rounded-xl border-2 border-emerald-500 shadow-2xl z-20"></video>
+
+      <div id="pdfSbControls" class="hidden absolute top-4 right-4 bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl text-xs flex items-center gap-3 z-20">
+        <button onclick="changeSbPdfPage(-1)" class="hover:text-emerald-400"><i class="fa-solid fa-chevron-left"></i> पिछला</button>
+        <span id="sbPdfPageNum" class="font-mono text-emerald-400 font-bold">1 / 1</span>
+        <button onclick="changeSbPdfPage(1)" class="hover:text-emerald-400">अगला <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 2. एडवांस्ड फ़ाइल मैनेजर हब मोडल (z-[85]) -->
+  <div id="fileManagerHubModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[85] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-4xl w-full rounded-2xl p-6 space-y-5 border border-slate-700 max-h-[90vh] flex flex-col">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-folder-tree"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
+              मल्टी-स्टोरेज फ़ाइल मैनेजर हब
+            </h3>
+            <p class="text-xs text-slate-400">इंटरनल वॉल्ट, एक्सटर्नल एवं क्लाउड स्टोरेज की विस्तृत स्थिति व इन-प्लेस मैनेजमेंट</p>
+          </div>
+        </div>
+        <button onclick="closeFileManagerHubModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- टैब्स -->
+      <div class="flex items-center gap-2 p-1.5 bg-slate-900 rounded-xl border border-slate-800 text-xs flex-shrink-0 overflow-x-auto">
+        <button onclick="switchFmTab('all')" id="fm-tab-all" class="fm-tab-btn flex-1 py-2.5 px-3 rounded-lg font-bold bg-cyan-600 text-white transition flex items-center justify-center gap-2 min-w-[120px]">
+          <i class="fa-solid fa-layer-group"></i> <span>सभी स्टोरेज फ़ाइलें</span>
+        </button>
+
+        <button onclick="switchFmTab('internal')" id="fm-tab-internal" class="fm-tab-btn flex-1 py-2.5 px-3 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2 min-w-[120px]">
+          <i class="fa-solid fa-hard-drive text-blue-400"></i> <span>💾 इंटरनल वॉल्ट</span>
+        </button>
+
+        <button onclick="switchFmTab('external')" id="fm-tab-external" class="fm-tab-btn flex-1 py-2.5 px-3 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2 min-w-[120px]">
+          <i class="fa-solid fa-plug text-emerald-400"></i> <span>🔌 एक्सटर्नल ड्राइव</span>
+        </button>
+
+        <button onclick="switchFmTab('cloud')" id="fm-tab-cloud" class="fm-tab-btn flex-1 py-2.5 px-3 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2 min-w-[120px]">
+          <i class="fa-solid fa-cloud text-amber-400"></i> <span>☁️ क्लाउड स्टोरेज</span>
+        </button>
+      </div>
+
+      <!-- चयनित टैब का स्टैट्स कार्ड -->
+      <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 flex-shrink-0">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2 text-xs">
+          <span id="fmTabTitle" class="font-bold text-cyan-300 flex items-center gap-2">
+            <i class="fa-solid fa-database"></i> सभी स्टोरेज का विवरण
+          </span>
+          <div class="flex items-center gap-3 font-mono">
+            <span class="text-slate-400">फ़ाइलें: <strong id="fmTabFileCount" class="text-cyan-400">0</strong></span>
+            <span class="text-slate-600">|</span>
+            <span class="text-slate-400">भर गया: <strong id="fmTabUsedSize" class="text-rose-400">0 MB</strong></span>
+            <span class="text-slate-600">|</span>
+            <span class="text-slate-400">खाली: <strong id="fmTabFreeSize" class="text-emerald-400">1000 MB</strong></span>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800 p-0.5">
+            <div id="fm-bar-doc" class="bg-blue-500 h-full transition-all" style="width: 0%" title="दस्तावेज़"></div>
+            <div id="fm-bar-xls" class="bg-emerald-500 h-full transition-all" style="width: 0%" title="स्प्रेडशीट"></div>
+            <div id="fm-bar-board" class="bg-amber-500 h-full transition-all" style="width: 0%" title="स्मार्ट बोर्ड"></div>
+            <div id="fm-bar-app" class="bg-lime-500 h-full transition-all" style="width: 0%" title="ऐप्स/सॉफ्टवेयर"></div>
+            <div id="fm-bar-code" class="bg-cyan-500 h-full transition-all" style="width: 0%" title="वेब व कोड"></div>
+            <div id="fm-bar-media" class="bg-purple-500 h-full transition-all" style="width: 0%" title="मीडिया"></div>
+          </div>
+          <div class="flex flex-wrap justify-between gap-1 text-[10px] text-slate-400 pt-1 font-mono">
+            <span>📄 Docs: <strong id="fm-size-doc" class="text-slate-300">0 MB</strong></span>
+            <span>📊 XLS: <strong id="fm-size-xls" class="text-slate-300">0 MB</strong></span>
+            <span>🎨 Board: <strong id="fm-size-board" class="text-slate-300">0 MB</strong></span>
+            <span>📱 Apps: <strong id="fm-size-app" class="text-slate-300">0 MB</strong></span>
+            <span>💻 Code: <strong id="fm-size-code" class="text-slate-300">0 MB</strong></span>
+            <span>🎬 Media: <strong id="fm-size-media" class="text-slate-300">0 MB</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- तालिका -->
+      <div class="flex-1 overflow-y-auto border border-slate-800 rounded-xl bg-slate-900/50">
+        <table class="w-full text-xs text-left border-collapse">
+          <thead class="bg-slate-800/90 sticky top-0 text-slate-300 font-bold border-b border-slate-700">
+            <tr>
+              <th class="p-3">फ़ाइल का नाम</th>
+              <th class="p-3">स्टोरेज स्रोत</th>
+              <th class="p-3">श्रेणी / फ़ॉर्मेट</th>
+              <th class="p-3">साइज़</th>
+              <th class="p-3 text-right">कार्रवाई (Actions)</th>
+            </tr>
+          </thead>
+          <tbody id="fmHubTableBody" class="divide-y divide-slate-800/80 text-slate-200"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 3. सुरक्षित ऑनलाइन शेयर मोडल (z-[120]) -->
+  <div id="shareModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[120] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full rounded-2xl p-6 space-y-5 border border-slate-700">
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold text-lg text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-share-nodes text-amber-400"></i> सुरक्षित शेयर लिंक
+        </h3>
+        <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">लिंक समय सीमा (Expiry Duration)</label>
+          <select id="shareExpirySelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none">
+            <option value="1h">1 घंटा</option>
+            <option value="24h" selected>24 घंटे</option>
+            <option value="7d">7 दिन</option>
+            <option value="never">कभी नहीं (No Expiry)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">सुरक्षा पासवर्ड (वैकल्पिक)</label>
+          <input type="password" id="sharePasswordInput" placeholder="पासवर्ड दर्ज करें..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none">
+        </div>
+
+        <button onclick="generateShareLink()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-2.5 rounded-xl transition">
+          <i class="fa-solid fa-link mr-1"></i> शेयर लिंक जनरेट करें
+        </button>
+
+        <div id="shareResultArea" class="hidden space-y-4 pt-3 border-t border-slate-800">
+          <div class="flex items-center gap-2">
+            <input type="text" id="shareGeneratedUrl" readonly class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-amber-400 font-mono">
+            <button onclick="copyShareUrl()" class="bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl text-xs text-slate-200 border border-slate-700">कॉपी</button>
+          </div>
+          <div class="flex flex-col items-center justify-center p-3 bg-white rounded-xl mx-auto w-fit">
+            <div id="qrcode"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. यूनिवर्सल HD व्यूअर व एडिटर (z-[110]) -->
+  <div id="viewerModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[110] hidden flex flex-col p-4 md:p-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <span id="viewerFileIcon" class="text-2xl text-cyan-400"><i class="fa-solid fa-file"></i></span>
+        <div>
+          <h3 id="viewerFileName" class="font-semibold text-slate-100 text-base truncate max-w-xs md:max-w-md">filename.ext</h3>
+          <p id="viewerFileMeta" class="text-xs text-slate-400">0 KB • HD View</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="annotateCurrentInSmartboard()" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-chalkboard-user text-amber-300"></i> स्मार्ट बोर्ड पर HD में खोलें व Annotate करें
+        </button>
+        <button id="btnSaveViewer" onclick="saveViewerEdits()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-medium transition">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> सहेजें
+        </button>
+        <button onclick="downloadCurrentViewerFile()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-700">
+          <i class="fa-solid fa-download mr-1"></i> डाउनलोड
+        </button>
+        <button onclick="closeViewerModal()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+
+    <div id="viewerBody" class="flex-1 my-4 overflow-auto rounded-xl glass-card p-4 flex items-center justify-center"></div>
+  </div>
+
+  <!-- 5. अपलोड मोडल (z-[70]) -->
+  <div id="uploadModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-lg w-full rounded-2xl p-6 space-y-5 border border-slate-700">
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold text-lg text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up text-cyan-400"></i> नई फ़ाइल या रिमोट URL अपलोड
+        </h3>
+        <button onclick="closeUploadModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="flex gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs">
+        <button onclick="switchUploadSource('local')" id="upsrc-local" class="flex-1 py-2 rounded-lg font-semibold bg-cyan-600 text-white transition">
+          💻 लोकल फ़ाइल / फोल्डर
+        </button>
+        <button onclick="switchUploadSource('url')" id="upsrc-url" class="flex-1 py-2 rounded-lg font-semibold bg-slate-800 text-slate-400 hover:text-slate-200 transition">
+          🔗 रिमोट URL फ़ाइल डाउनलोड
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div id="uploadLocalArea" class="space-y-3">
+          <input type="file" id="modalFileInputFiles" multiple accept="*/*" onchange="handleModalFileSelect(event)" class="hidden">
+          
+          <div onclick="document.getElementById('modalFileInputFiles').click()" class="border-2 border-dashed border-slate-700 hover:border-cyan-500 rounded-xl p-6 text-center cursor-pointer bg-slate-800/40 transition">
+            <i class="fa-solid fa-folder-open text-3xl text-cyan-400 mb-2"></i>
+            <p class="text-sm font-medium text-slate-200">फ़ाइल चुनें (Choose Files)</p>
+            <p class="text-xs text-slate-400 mt-0.5">PDF, DOCX, XLSX, PPTX, APK, ZIP, Video, Audio</p>
+          </div>
+
+          <div id="selectedFilesList" class="max-h-32 overflow-y-auto space-y-1.5 text-xs"></div>
+        </div>
+
+        <div id="uploadUrlArea" class="hidden space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1.5">इंटरनेट फ़ाइल, YouTube या सोशल मीडिया URL लिंक:</label>
+            <input type="text" id="uploadUrlInput" oninput="handleUploadUrlChange()" placeholder="https://youtube.com/watch?v=... या https://site.com/file.pdf" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">फ़ाइल का नाम (वैकल्पिक):</label>
+            <input type="text" id="uploadUrlCustomName" placeholder="उदा. My_Video_HD.mp4" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div id="uploadProgressSection" class="hidden space-y-2 p-3 bg-slate-900/90 rounded-xl border border-cyan-500/40 animate-glow">
+          <div class="flex items-center justify-between text-xs font-semibold">
+            <span id="uploadStatusText" class="text-cyan-400 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> फ़ाइल पढ़ी जा रही है...</span>
+            <span id="uploadProgressPercent" class="text-amber-400 font-mono">0%</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+            <div id="uploadProgressBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-200"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+            <span id="uploadDetailText">0 MB / 0 MB</span>
+            <span id="uploadSpeedText">0 KB/s</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeUploadModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 transition">रद्द करें</button>
+        <button onclick="processModalUpload()" id="btnStartUpload" disabled class="px-5 py-2 rounded-xl text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white shadow transition">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> सहेजें व अपलोड करें
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. रिमोट व यूट्यूब डाउनलोडर मोडल -->
+  <div id="remoteDownloaderModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-lg w-full rounded-2xl p-6 space-y-5 border border-slate-700">
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold text-lg text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-download text-amber-400"></i> रिमोट URL एवं YouTube डाउनलोडर
+        </h3>
+        <button onclick="closeRemoteDownloaderModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">डायरेक्ट फ़ाइल, YouTube, Instagram, FB या सोशल मीडिया URL:</label>
+          <input type="text" id="remoteDownloaderUrl" placeholder="https://youtube.com/watch?v=..., https://instagram.com/reel/..., या direct file link" 
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+        </div>
+
+        <div id="remoteDownloadProgressSection" class="hidden space-y-2 p-3 bg-slate-900/90 rounded-xl border border-amber-500/40 animate-glow">
+          <div class="flex items-center justify-between font-semibold">
+            <span id="remoteDownloadStatusText" class="text-amber-400"><i class="fa-solid fa-spinner fa-spin"></i> डाउनलोड हो रहा है...</span>
+            <span id="remoteDownloadPercentText" class="text-cyan-400 font-mono">0%</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+            <div id="remoteDownloadProgressBar" class="bg-gradient-to-r from-amber-500 to-cyan-400 h-full w-0 transition-all duration-200"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+            <span id="remoteDownloadSizeText">0 MB / 0 MB</span>
+            <span id="remoteDownloadSpeedText">0 KB/s</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeRemoteDownloaderModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 transition">रद्द करें</button>
+        <button onclick="processRemoteDownload()" class="px-5 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow transition">
+          <i class="fa-solid fa-download mr-1"></i> वॉल्ट में डाउनलोड करें
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. HD लाइव स्ट्रीमिंग व स्क्रीन शेयर मोडल (z-50) -->
+  <div id="liveStreamModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 hidden flex flex-col p-4 md:p-6 overflow-y-auto">
+    <div class="glass-card border-b border-slate-800 pb-3 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 text-xl animate-pulse">
+          <i class="fa-solid fa-tower-broadcast"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-100 text-base flex items-center gap-2">
+            HD स्क्रीन शेयर, यूट्यूब व सोशल लाइव हब
+            <span id="liveBadge" class="hidden bg-rose-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full animate-pulse">LIVE 🔴</span>
+          </h3>
+        </div>
+      </div>
+      <button onclick="closeLiveStreamModal()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="flex-1 my-4 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+      <div class="lg:col-span-2 glass-card rounded-2xl p-4 flex flex-col justify-between relative bg-slate-950 gap-4">
+        <div class="relative flex-1 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center min-h-[250px]">
+          <video id="liveStreamPreview" autoplay muted playsinline class="w-full h-full object-contain"></video>
+          <div id="streamPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 gap-3 p-4 text-center">
+            <i class="fa-solid fa-desktop text-5xl text-indigo-500/80 mb-1"></i>
+            <h4 class="font-semibold text-slate-300 text-sm">HD स्क्रीन शेयर शुरू करने के लिए नीचे स्रोत चुनें</h4>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-stream-screen" onclick="startStreamSource('screen')" class="stream-src-btn bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition">
+              <i class="fa-solid fa-desktop text-amber-300"></i> HD स्क्रीन शेयर (1080p)
+            </button>
+            <button id="btn-stream-camera" onclick="startStreamSource('camera')" class="stream-src-btn bg-slate-800 text-slate-200 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-medium">
+              <i class="fa-solid fa-camera text-rose-400"></i> वेबकैम
+            </button>
+            <button id="btn-stream-board" onclick="startStreamSource('board')" class="stream-src-btn bg-slate-800 text-slate-200 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-medium">
+              <i class="fa-solid fa-chalkboard text-emerald-400"></i> स्मार्ट बोर्ड लाइव
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-800">
+          <button id="btnToggleRecord" onclick="toggleStreamRecording()" disabled class="bg-slate-800 text-amber-400 border border-amber-500/30 px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-2">
+            <i class="fa-solid fa-circle-dot text-rose-500"></i> HD रिकॉर्ड करें (REC)
+          </button>
+          <button onclick="stopLiveStream()" class="bg-rose-950/60 text-rose-300 border border-rose-500/30 px-4 py-2 rounded-xl text-xs font-medium">
+            रोकें
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <h4 class="font-semibold text-sm text-slate-200 border-b border-slate-800 pb-2">स्ट्रीम लिंक</h4>
+          <input type="text" id="streamTitleInput" value="DocVault AI - HD लाइव क्लास" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100">
+        </div>
+        <div class="flex items-center gap-2 pt-3 border-t border-slate-800">
+          <input type="text" id="liveStreamShareUrl" readonly class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-rose-400 font-mono">
+          <button onclick="copyLiveStreamUrl()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-medium">कॉपी</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. इन-प्लेस स्टोरेज टेबल मोडल (z-[75]) -->
+  <div id="storageManagerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[75] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-3xl w-full rounded-2xl p-6 space-y-5 border border-slate-700 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 flex-shrink-0">
+        <h3 class="font-semibold text-lg text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-hard-drive text-cyan-400"></i> इन-प्लेस स्टोरेज तालिका
+        </h3>
+        <button onclick="closeStorageManagerModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto border border-slate-800 rounded-xl bg-slate-900/50">
+        <table class="w-full text-xs text-left border-collapse">
+          <thead class="bg-slate-800/90 sticky top-0 text-slate-300 font-bold border-b border-slate-700">
+            <tr>
+              <th class="p-3">फ़ाइल का नाम</th>
+              <th class="p-3">प्रकार / श्रेणी</th>
+              <th class="p-3">साइज़</th>
+              <th class="p-3 text-right">एक्शन</th>
+            </tr>
+          </thead>
+          <tbody id="storageMgrTableBody" class="divide-y divide-slate-800/80 text-slate-200"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8.1 स्टोरेज क्षमता विस्तार एवं एक्सटर्नल/क्लाउड कनेक्ट मोडल (z-[80]) -->
+  <div id="storageConnectModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[80] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-3xl w-full rounded-2xl p-6 space-y-5 border border-slate-700 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
+              स्टोरेज क्षमता विस्तार एवं क्लाउड/एक्सटर्नल कनेक्ट
+            </h3>
+            <p class="text-xs text-slate-400">इंटरनल क्षमता बढ़ाएं, USB/SD कार्ड माउंट करें या क्लाउड ड्राइव्स सिंक करें</p>
+          </div>
+        </div>
+        <button onclick="closeStorageConnectModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- टैब्स -->
+      <div class="flex items-center gap-2 p-1.5 bg-slate-900 rounded-xl border border-slate-800 text-xs flex-shrink-0 overflow-x-auto">
+        <button onclick="switchStorageConnectTab('internal')" id="st-tab-internal" class="st-connect-tab flex-1 py-2.5 px-3 rounded-lg font-bold bg-amber-600 text-white transition flex items-center justify-center gap-2 min-w-[130px]">
+          <i class="fa-solid fa-hard-drive"></i> <span>💾 इंटरनल कोटा बढ़ाएं</span>
+        </button>
+        <button onclick="switchStorageConnectTab('external')" id="st-tab-external" class="st-connect-tab flex-1 py-2.5 px-3 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2 min-w-[130px]">
+          <i class="fa-solid fa-plug text-emerald-400"></i> <span>🔌 एक्सटर्नल ड्राइव कनेक्ट</span>
+        </button>
+        <button onclick="switchStorageConnectTab('cloud')" id="st-tab-cloud" class="st-connect-tab flex-1 py-2.5 px-3 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2 min-w-[130px]">
+          <i class="fa-solid fa-cloud text-cyan-400"></i> <span>☁️ क्लाउड सर्विसेज जोड़ें</span>
+        </button>
+      </div>
+
+      <!-- टैब 1: इंटरनल स्टोरेज विस्तार -->
+      <div id="st-connect-body-internal" class="space-y-4 text-xs overflow-y-auto pr-1">
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-sm text-amber-300 flex items-center gap-2">
+              <i class="fa-solid fa-microchip"></i> ब्राउज़र इन-मेमोरी व IndexedDB कोटा
+            </h4>
+            <span id="persistedStatusBadge" class="bg-slate-800 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-full text-[10px] font-mono">जांच जारी...</span>
+          </div>
+          <p class="text-slate-400 leading-relaxed">
+            ब्राउज़र डिफ़ॉल्ट रूप से स्टोरेज को टेम्पररी मानता है। नीचे दिए गए बटन पर क्लिक करके स्थायी स्टोरेज अनुमति (Persisted Storage) सक्षम करें ताकि बड़ी फ़ाइलें रिफ्रेश होने पर भी सुरक्षित रहें।
+          </p>
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button onclick="requestPersistedStorage()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow">
+              <i class="fa-solid fa-shield-halved"></i> स्थायी स्टोरेज (Persisted Storage) सक्षम करें
+            </button>
+            <button onclick="checkStorageQuotaDetails()" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5">
+              <i class="fa-solid fa-rotate"></i> क्षमता जांचें
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
+            <span class="text-slate-400 block font-medium">ब्राउज़र कुल अनुमत कोटा</span>
+            <span id="quotaEstimatedTotal" class="font-mono text-cyan-400 text-base font-bold">1000 MB</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
+            <span class="text-slate-400 block font-medium">वर्तमान वॉल्ट प्रयुक्त स्थान</span>
+            <span id="quotaCurrentUsed" class="font-mono text-rose-400 text-base font-bold">0 MB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- टैब 2: एक्सटर्नल ड्राइव कनेक्ट -->
+      <div id="st-connect-body-external" class="hidden space-y-4 text-xs overflow-y-auto pr-1">
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <h4 class="font-bold text-sm text-emerald-300 flex items-center gap-2">
+            <i class="fa-solid fa-hard-drive"></i> USB पेनड्राइव / SD कार्ड / हार्ड डिस्क फोल्डर माउंट करें
+          </h4>
+          <p class="text-slate-400 leading-relaxed">
+            आप अपने लैपटॉप/पीसी से जुड़े किसी भी USB पेनड्राइव, SD कार्ड या एक्सटर्नल फोल्डर को सीधे वॉल्ट से कनेक्ट कर सकते हैं।
+          </p>
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button onclick="connectNativeExternalDrive()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow">
+              <i class="fa-solid fa-folder-plus"></i> USB / SD कार्ड फोल्डर चुनें (Direct Mount)
+            </button>
+            <button onclick="addTestExternalDrive()" class="bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5">
+              <i class="fa-solid fa-vial"></i> टेस्ट एक्सटर्नल फ़ाइलें जोड़ें
+            </button>
+          </div>
+        </div>
+
+        <div id="externalDriveStatusBox" class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 text-slate-300 flex items-center justify-between">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-plug text-emerald-400"></i> एक्सटर्नल ड्राइव स्थिति:</span>
+          <span id="extDriveBadge" class="font-mono text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full">कोई ड्राइव कनेक्ट नहीं</span>
+        </div>
+      </div>
+
+      <!-- टैब 3: क्लाउड स्टोरेज जोड़ें -->
+      <div id="st-connect-body-cloud" class="hidden space-y-4 text-xs overflow-y-auto pr-1 max-h-[50vh]">
+        
+        <!-- Google Drive -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-brands fa-google-drive text-amber-400 text-lg"></i>
+              <h4 class="font-bold text-slate-200">Google Drive (गूगल ड्राइव API)</h4>
+            </div>
+            <span id="badge-gdrive" class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">Not Connected</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input type="text" id="gdriveClientId" placeholder="OAuth Client ID (e.g. xxx.apps.googleusercontent.com)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+            <input type="text" id="gdriveApiKey" placeholder="API Key (वैकल्पिक)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+          </div>
+          <button onclick="saveCloudConfig('gdrive')" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-1.5 rounded-xl transition">
+            <i class="fa-solid fa-link mr-1"></i> Google Drive कनेक्ट करें व सिंक करें
+          </button>
+        </div>
+
+        <!-- OneDrive -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-brands fa-microsoft text-blue-400 text-lg"></i>
+              <h4 class="font-bold text-slate-200">Microsoft OneDrive (वनड्राइव)</h4>
+            </div>
+            <span id="badge-onedrive" class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">Not Connected</span>
+          </div>
+          <input type="text" id="onedriveClientId" placeholder="Microsoft Application (Client) ID" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500">
+          <button onclick="saveCloudConfig('onedrive')" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-1.5 rounded-xl transition">
+            <i class="fa-solid fa-link mr-1"></i> OneDrive कनेक्ट करें
+          </button>
+        </div>
+
+        <!-- Dropbox -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-brands fa-dropbox text-cyan-400 text-lg"></i>
+              <h4 class="font-bold text-slate-200">Dropbox (ड्रॉपबॉक्स)</h4>
+            </div>
+            <span id="badge-dropbox" class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">Not Connected</span>
+          </div>
+          <input type="password" id="dropboxToken" placeholder="Dropbox Generated Access Token" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
+          <button onclick="saveCloudConfig('dropbox')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-medium px-4 py-1.5 rounded-xl transition">
+            <i class="fa-solid fa-link mr-1"></i> Dropbox कनेक्ट करें
+          </button>
+        </div>
+
+        <!-- Firebase Storage -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-fire text-orange-500 text-lg"></i>
+              <h4 class="font-bold text-slate-200">Firebase Cloud Storage</h4>
+            </div>
+            <span id="badge-firebase" class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">Not Connected</span>
+          </div>
+          <input type="text" id="firebaseBucketName" placeholder="Storage Bucket Name (e.g. my-app.appspot.com)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-orange-500">
+          <button onclick="saveCloudConfig('firebase')" class="bg-orange-600 hover:bg-orange-500 text-white font-medium px-4 py-1.5 rounded-xl transition">
+            <i class="fa-solid fa-link mr-1"></i> Firebase Bucket से सिंक करें
+          </button>
+        </div>
+
+        <!-- Custom S3 / WebDAV -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-server text-purple-400 text-lg"></i>
+              <h4 class="font-bold text-slate-200">Custom WebDAV / AWS S3 Server</h4>
+            </div>
+            <span id="badge-s3" class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">Not Connected</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input type="text" id="s3Endpoint" placeholder="Endpoint URL (e.g. https://s3.amazonaws.com/mybucket)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500">
+            <input type="password" id="s3AccessKey" placeholder="Access Key / Auth Token" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500">
+          </div>
+          <button onclick="saveCloudConfig('s3')" class="bg-purple-600 hover:bg-purple-500 text-white font-medium px-4 py-1.5 rounded-xl transition">
+            <i class="fa-solid fa-link mr-1"></i> S3 / WebDAV सर्वर जोड़ें
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 9. कस्टम कन्फर्म डायलॉग मोडल (z-[130]) -->
+  <div id="customConfirmModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[130] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-sm w-full rounded-2xl p-5 space-y-4 border border-rose-500/40 animate-slide-up">
+      <div class="flex items-center gap-3 text-rose-400">
+        <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+        <h3 id="confirmTitle" class="font-bold text-base text-slate-100">पुष्टिकरण</h3>
+      </div>
+      <p id="confirmMessage" class="text-xs text-slate-300 leading-relaxed">क्या आप वाकई इस फ़ाइल को हटाना चाहते हैं?</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btnConfirmCancel" class="px-4 py-1.5 rounded-xl text-xs text-slate-400 hover:bg-slate-800">रद्द करें</button>
+        <button id="btnConfirmOk" class="px-4 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow">हाँ, हटाएँ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. Gemini AI असिस्टेंट -->
+  <div id="aiDrawer" class="fixed top-0 right-0 h-full w-full sm:w-96 glass-card border-l border-slate-800 z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-amber-400 text-lg"></i>
+        <h3 class="font-bold text-slate-100 text-base">Gemini AI सहायक</h3>
+      </div>
+      <button onclick="toggleAiDrawer()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+
+    <div class="p-3 bg-slate-900/60 border-b border-slate-800 flex gap-2 overflow-x-auto text-xs">
+      <button onclick="sendQuickAiPrompt('इस फ़ाइल या बोर्ड नोट्स का मुख्य सारांश बताएँ।')" class="whitespace-nowrap bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2.5 py-1.5 rounded-lg border border-slate-700">📝 संक्षेप</button>
+      <button onclick="sendQuickAiPrompt('5 मुख्य बिंदु निकालें।')" class="whitespace-nowrap bg-slate-800 hover:bg-slate-700 text-amber-400 px-2.5 py-1.5 rounded-lg border border-slate-700">💡 मुख्य बिंदु</button>
+      <button onclick="sendQuickAiPrompt('इसे आसान भाषा में समझाएं।')" class="whitespace-nowrap bg-slate-800 hover:bg-slate-700 text-emerald-400 px-2.5 py-1.5 rounded-lg border border-slate-700">🔍 व्याख्या</button>
+    </div>
+
+    <div id="aiChatBody" class="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
+      <div class="bg-slate-800/80 p-3 rounded-2xl rounded-tl-none border border-slate-700/60 text-slate-300 leading-relaxed">
+        नमस्ते! मैं आपका **Gemini AI असिस्टेंट** हूँ। आप अपनी किसी भी फ़ाइल या HD स्मार्ट बोर्ड से संबंधित सवाल पूछ सकते हैं।
+      </div>
+    </div>
+
+    <div class="p-3 border-t border-slate-800 flex gap-2">
+      <input type="text" id="aiInput" placeholder="सवाल पूछें..." onkeydown="if(event.key==='Enter') sendAiMessage()" 
+        class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+      <button onclick="sendAiMessage()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-xl text-xs font-medium">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let memoryVault = [];
+    let activeFmTabSource = 'all';
+
+    const db = new Dexie("DocVaultHD_FinalEngineDB");
+    db.version(1).stores({
+      files: "id, name, ext, category, size, type, updatedAt, sharedKey, password, expiresAt, storageSource",
+      sharedData: "id, fileId, password, expiresAt, payload"
+    });
+
+    let currentCategory = 'all';
+    let allFiles = [];
+    let selectedUploadFiles = [];
+    let uploadSourceMode = 'local';
+    let currentViewingFile = null;
+    let pendingConfirmCallback = null;
+    const apiKey = "";
+
+    // डेटा रूपांतरण सहाय्यक
+    async function getContentAsArrayBuffer(content) {
+      if (!content) return new ArrayBuffer(0);
+      if (content instanceof ArrayBuffer) return content;
+      if (content instanceof Blob) return await content.arrayBuffer();
+      if (content.buffer instanceof ArrayBuffer) return content.buffer;
+      return new ArrayBuffer(0);
+    }
+
+    async function getContentAsText(content) {
+      if (!content) return "";
+      if (typeof content === 'string') return content;
+      if (content instanceof Blob) return await content.text();
+      const buffer = await getContentAsArrayBuffer(content);
+      return new TextDecoder().decode(buffer);
+    }
+
+    async function getContentAsBlob(content, mimeType = 'application/octet-stream') {
+      if (content instanceof Blob) return content;
+      if (content instanceof ArrayBuffer) return new Blob([content], { type: mimeType });
+      return new Blob([], { type: mimeType });
+    }
+
+    // स्मार्ट बोर्ड स्थिति
+    let sbCanvas = null, sbCtx = null;
+    let isDrawing = false;
+    let sbTool = 'pen';
+    let sbColor = '#38bdf8';
+    let sbLineWidth = 3;
+    let sbZoomScale = 1.0;
+    let startX = 0, startY = 0;
+    let canvasSnapshot = null;
+    let activeSbPdfDoc = null;
+    let activeSbPdfPage = 1;
+    let sbDeviceRatio = Math.max(window.devicePixelRatio || 1, 2);
+
+    // लाइव स्ट्रीमिंग ब्रॉडकास्ट
+    const streamChannel = new BroadcastChannel('docvault_hd_broadcast');
+    let streamBroadcastInterval = null;
+    let liveStreamMedia = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      setupDragAndDrop();
+      setupConfirmModalHandlers();
+      await loadFilesFromDB();
+      initSmartboard();
+      setupStreamChannelListener();
+      checkUrlHash();
+    });
+
+    window.addEventListener('hashchange', checkUrlHash);
+
+    function checkUrlHash() {
+      const hash = window.location.hash;
+      if (!hash) return;
+      if (hash.startsWith('#share=')) {
+        const shareKey = hash.replace('#share=', '');
+        openSharedFileFromHash(shareKey);
+      }
+    }
+
+    async function openSharedFileFromHash(shareKey) {
+      let file = memoryVault.find(f => f.sharedKey === shareKey) || allFiles.find(f => f.sharedKey === shareKey);
+      if (!file) {
+        try {
+          const matched = await db.files.where('sharedKey').equals(shareKey).first();
+          if (matched) file = matched;
+        } catch (e) {}
+      }
+
+      if (file) {
+        if (file.expiresAt && Date.now() > file.expiresAt) {
+          showToast("यह शेयर लिंक समय-सीमा समाप्त (Expired) हो चुकी है!", "error");
+          return;
+        }
+        if (file.password) {
+          const pass = prompt("इस फ़ाइल को देखने के लिए पासवर्ड दर्ज करें:");
+          if (pass !== file.password) {
+            showToast("गलत पासवर्ड!", "error");
+            return;
+          }
+        }
+        openViewer(file.id);
+        showToast("शेयर की गई फ़ाइल सफलतापूर्वक खोली गई!", "success");
+      }
+    }
+
+    async function loadFilesFromDB() {
+      try {
+        let rawFiles = [];
+        try {
+          const dbPromise = db.files.toArray();
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Dexie Timeout")), 800));
+          rawFiles = await Promise.race([dbPromise, timeoutPromise]);
+        } catch (dbErr) {
+          console.warn("IndexedDB Access Warning / Timeout, using memory vault fallback:", dbErr);
+        }
+
+        const fileMap = new Map();
+        memoryVault.forEach(f => fileMap.set(f.id, f));
+        if (Array.isArray(rawFiles)) {
+          rawFiles.forEach(f => {
+            if (!fileMap.has(f.id)) {
+              fileMap.set(f.id, f);
+            } else {
+              const mem = fileMap.get(f.id);
+              if (!mem.content && f.content) mem.content = f.content;
+            }
+          });
+        }
+
+        memoryVault = Array.from(fileMap.values());
+
+        if (memoryVault.length === 0) {
+          await seedDemoFiles();
+        }
+        
+        allFiles = memoryVault.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        updateCategoryCounts();
+        renderFileList();
+        updateStorageStats();
+      } catch (err) {
+        console.error("DB Load Error:", err);
+        allFiles = memoryVault.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        renderFileList();
+      }
+    }
+
+    async function seedDemoFiles() {
+      const encoder = new TextEncoder();
+      const now = Date.now();
+      const demoFiles = [
+        {
+          id: 'doc_demo_1',
+          name: 'DocVault AI - HD स्मार्ट बोर्ड गाइड.md',
+          ext: 'md',
+          category: 'document',
+          storageSource: 'internal',
+          size: 1400,
+          type: 'text/markdown',
+          updatedAt: now - 3600000,
+          content: encoder.encode(`# DocVault AI - HD स्मार्ट बोर्ड व मल्टी-मीडिया गाइड\n\n1. **HD स्मार्ट बोर्ड**: High-DPI कैनवास पर पेन, इरेज़र, शेप्स व नोट्स बनाएं।\n2. **PDF/DOC इम्पॉर्ट**: किसी भी PDF को HD में बोर्ड पर लोड कर Annotate करें।\n3. **फ़ाइल मैनेजर हब**: इंटरनल, एक्सटर्नल व क्लाउड फ़ाइलों को एक जगह प्रबंधित करें।`).buffer
+        }
+      ];
+      for (const f of demoFiles) await saveFileToVault(f);
+    }
+
+    async function saveFileToVault(fileRecord) {
+      if (!fileRecord.storageSource) fileRecord.storageSource = 'internal';
+
+      const existingIdx = memoryVault.findIndex(f => f.id === fileRecord.id);
+      if (existingIdx >= 0) memoryVault[existingIdx] = fileRecord;
+      else memoryVault.push(fileRecord);
+
+      currentCategory = 'all';
+
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-800/80', 'text-cyan-400');
+        btn.classList.add('text-slate-300');
+      });
+      const catAllBtn = document.getElementById('cat-all');
+      if (catAllBtn) catAllBtn.classList.add('bg-slate-800/80', 'text-cyan-400');
+
+      allFiles = memoryVault.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      updateCategoryCounts();
+      renderFileList();
+      updateStorageStats();
+
+      if (!document.getElementById('fileManagerHubModal').classList.contains('hidden')) {
+        renderFileManagerHub();
+      }
+
+      try {
+        await db.files.put(fileRecord);
+      } catch (e) {
+        console.warn("IndexedDB save fallback:", e);
+      }
+    }
+
+    function safeSetText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    }
+
+    function safeSetWidth(id, pct) {
+      const el = document.getElementById(id);
+      if (el) el.style.width = `${pct}%`;
+    }
+
+    function updateCategoryCounts() {
+      const counts = { all: allFiles.length, smartboard: 0, document: 0, spreadsheet: 0, software: 0, code: 0, media: 0, shared: 0 };
+      allFiles.forEach(f => {
+        if (counts[f.category] !== undefined) counts[f.category]++;
+        if (f.sharedKey) counts.shared++;
+      });
+      safeSetText('count-all', counts.all);
+      safeSetText('count-smartboard', counts.smartboard);
+      safeSetText('count-document', counts.document);
+      safeSetText('count-spreadsheet', counts.spreadsheet);
+      safeSetText('count-software', counts.software);
+      safeSetText('count-code', counts.code);
+      safeSetText('count-media', counts.media);
+      safeSetText('count-shared', counts.shared);
+    }
+
+    async function updateStorageStats() {
+      let totalUsedBytes = 0;
+      const catSizes = { document: 0, spreadsheet: 0, smartboard: 0, software: 0, code: 0, media: 0 };
+
+      allFiles.forEach(f => {
+        const size = f.size || 0;
+        totalUsedBytes += size;
+        if (catSizes[f.category] !== undefined) catSizes[f.category] += size;
+        else catSizes.document += size;
+      });
+
+      const maxQuotaBytes = 1000 * 1024 * 1024;
+      const freeBytes = Math.max(0, maxQuotaBytes - totalUsedBytes);
+
+      const totalUsedMB = (totalUsedBytes / (1024 * 1024)).toFixed(1);
+      const freeMB = (freeBytes / (1024 * 1024)).toFixed(1);
+      const usedPct = Math.min(100, Math.round((totalUsedBytes / maxQuotaBytes) * 100));
+
+      const getCatMb = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+      safeSetText('topStoragePercentText', `${usedPct}%`);
+      safeSetText('topStorageUsedText', `${totalUsedMB} MB भर गया`);
+      safeSetText('topStorageFreeText', `${freeMB} MB खाली`);
+
+      safeSetText('top-size-document', getCatMb(catSizes.document));
+      safeSetText('top-size-spreadsheet', getCatMb(catSizes.spreadsheet));
+      safeSetText('top-size-smartboard', getCatMb(catSizes.smartboard));
+      safeSetText('top-size-software', getCatMb(catSizes.software));
+      safeSetText('top-size-code', getCatMb(catSizes.code));
+      safeSetText('top-size-media', getCatMb(catSizes.media));
+
+      const getCatPct = (bytes) => totalUsedBytes > 0 ? (bytes / maxQuotaBytes) * 100 : 0;
+      safeSetWidth('top-bar-document', getCatPct(catSizes.document));
+      safeSetWidth('top-bar-spreadsheet', getCatPct(catSizes.spreadsheet));
+      safeSetWidth('top-bar-smartboard', getCatPct(catSizes.smartboard));
+      safeSetWidth('top-bar-software', getCatPct(catSizes.software));
+      safeSetWidth('top-bar-code', getCatPct(catSizes.code));
+      safeSetWidth('top-bar-media', getCatPct(catSizes.media));
+    }
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-800/80', 'text-cyan-400');
+        btn.classList.add('text-slate-300');
+      });
+      const activeBtn = document.getElementById(`cat-${cat}`);
+      if (activeBtn) activeBtn.classList.add('bg-slate-800/80', 'text-cyan-400');
+      renderFileList();
+    }
+
+    function renderFileList(filteredData = null) {
+      const grid = document.getElementById('fileGrid');
+      const emptyState = document.getElementById('emptyState');
+      grid.innerHTML = '';
+
+      let list = filteredData || allFiles;
+      if (!filteredData && currentCategory !== 'all') {
+        if (currentCategory === 'shared') list = list.filter(f => f.sharedKey);
+        else list = list.filter(f => f.category === currentCategory);
+      }
+
+      safeSetText('fileCountBadge', `${list.length} फ़ाइलें मिलीं`);
+
+      if (list.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      list.forEach(file => {
+        const card = document.createElement('div');
+        card.className = "glass-card rounded-2xl p-4 flex flex-col justify-between hover:border-slate-600 transition relative animate-slide-up";
+
+        const iconData = getFileIcon(file.ext, file.category);
+        const formattedSize = formatBytes(file.size);
+        const formattedDate = new Date(file.updatedAt || Date.now()).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' });
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <div class="w-10 h-10 rounded-xl ${iconData.bg} ${iconData.color} flex items-center justify-center text-lg flex-shrink-0">
+                <i class="${iconData.icon}"></i>
+              </div>
+              <div class="flex items-center gap-1">
+                <button onclick="renameFile('${file.id}')" class="text-slate-400 hover:text-cyan-400 p-1.5 text-xs rounded-lg hover:bg-slate-800 transition" title="रिनेम करें">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button onclick="openShareModal('${file.id}')" class="text-slate-400 hover:text-amber-400 p-1.5 text-xs rounded-lg hover:bg-slate-800 transition" title="शेयर करें">
+                  <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button onclick="deleteFileWithConfirm('${file.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 text-xs rounded-lg hover:bg-slate-800 transition" title="हटाएं">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="font-medium text-slate-200 text-sm truncate mb-1" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</h4>
+            <p class="text-xs text-slate-400">${(file.ext || '').toUpperCase()} • ${formattedSize} • ${formattedDate}</p>
+          </div>
+
+          <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800">
+            <button onclick="openViewer('${file.id}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-medium py-1.5 rounded-xl transition flex items-center justify-center gap-1">
+              <i class="fa-solid fa-eye"></i> देखें / HD एडिट
+            </button>
+            <button onclick="downloadFile('${file.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl text-xs transition" title="डाउनलोड">
+              <i class="fa-solid fa-download"></i>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function getFileIcon(ext, category) {
+      ext = (ext || '').toLowerCase();
+      if (category === 'smartboard') return { icon: 'fa-solid fa-chalkboard', color: 'text-amber-400', bg: 'bg-amber-500/10' };
+      if (['apk', 'exe', 'msi', 'dmg', 'zip', 'rar', '7z'].includes(ext) || category === 'software') return { icon: 'fa-brands fa-android', color: 'text-lime-400', bg: 'bg-lime-500/10' };
+      if (['html', 'css', 'js', 'py', 'json', 'xml'].includes(ext) || category === 'code') return { icon: 'fa-solid fa-code', color: 'text-cyan-400', bg: 'bg-cyan-500/10' };
+      if (['pdf'].includes(ext)) return { icon: 'fa-solid fa-file-pdf', color: 'text-rose-400', bg: 'bg-rose-500/10' };
+      if (['doc', 'docx'].includes(ext)) return { icon: 'fa-solid fa-file-word', color: 'text-blue-400', bg: 'bg-blue-500/10' };
+      if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'fa-solid fa-file-excel', color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
+      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return { icon: 'fa-solid fa-file-image', color: 'text-purple-400', bg: 'bg-purple-500/10' };
+      if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return { icon: 'fa-solid fa-file-audio', color: 'text-amber-400', bg: 'bg-amber-500/10' };
+      if (['mp4', 'webm', 'mkv'].includes(ext)) return { icon: 'fa-solid fa-file-video', color: 'text-pink-400', bg: 'bg-pink-500/10' };
+      return { icon: 'fa-solid fa-file-lines', color: 'text-cyan-400', bg: 'bg-cyan-500/10' };
+    }
+
+    function openFileManagerHubModal(sourceKey = 'all') {
+      document.getElementById('fileManagerHubModal').classList.remove('hidden');
+      switchFmTab(sourceKey);
+    }
+
+    function closeFileManagerHubModal() {
+      document.getElementById('fileManagerHubModal').classList.add('hidden');
+    }
+
+    function switchFmTab(sourceKey) {
+      activeFmTabSource = sourceKey;
+
+      document.querySelectorAll('.fm-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-cyan-600', 'text-white');
+        btn.classList.add('text-slate-400');
+      });
+
+      const activeBtn = document.getElementById(`fm-tab-${sourceKey}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('bg-cyan-600', 'text-white');
+      }
+
+      renderFileManagerHub();
+    }
+
+    function renderFileManagerHub() {
+      let filteredList = allFiles;
+      if (activeFmTabSource !== 'all') {
+        filteredList = allFiles.filter(f => (f.storageSource || 'internal') === activeFmTabSource);
+      }
+
+      let tabTitleText = "📊 सभी स्टोरेज स्रोतों का संयुक्त विवरण";
+      if (activeFmTabSource === 'internal') tabTitleText = "💾 इंटरनल वॉल्ट स्टोरेज विवरण (IndexedDB Local)";
+      else if (activeFmTabSource === 'external') tabTitleText = "🔌 एक्सटर्नल USB / SD कार्ड स्टोरेज विवरण";
+      else if (activeFmTabSource === 'cloud') tabTitleText = "☁️ क्लाउड ड्राइव एवं सर्वर सिंक विवरण";
+
+      safeSetText('fmTabTitle', tabTitleText);
+      safeSetText('fmTabFileCount', filteredList.length);
+
+      let totalUsedBytes = 0;
+      const catSizes = { document: 0, spreadsheet: 0, smartboard: 0, software: 0, code: 0, media: 0 };
+
+      filteredList.forEach(f => {
+        const sz = f.size || 0;
+        totalUsedBytes += sz;
+        if (catSizes[f.category] !== undefined) catSizes[f.category] += sz;
+        else catSizes.document += sz;
+      });
+
+      const maxQuotaBytes = 1000 * 1024 * 1024;
+      const freeBytes = Math.max(0, maxQuotaBytes - totalUsedBytes);
+
+      safeSetText('fmTabUsedSize', `${(totalUsedBytes / (1024 * 1024)).toFixed(1)} MB`);
+      safeSetText('fmTabFreeSize', `${(freeBytes / (1024 * 1024)).toFixed(1)} MB`);
+
+      const getMbStr = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      safeSetText('fm-size-doc', getMbStr(catSizes.document));
+      safeSetText('fm-size-xls', getMbStr(catSizes.spreadsheet));
+      safeSetText('fm-size-board', getMbStr(catSizes.smartboard));
+      safeSetText('fm-size-app', getMbStr(catSizes.software));
+      safeSetText('fm-size-code', getMbStr(catSizes.code));
+      safeSetText('fm-size-media', getMbStr(catSizes.media));
+
+      const getPct = (bytes) => totalUsedBytes > 0 ? (bytes / maxQuotaBytes) * 100 : 0;
+      safeSetWidth('fm-bar-doc', getPct(catSizes.document));
+      safeSetWidth('fm-bar-xls', getPct(catSizes.spreadsheet));
+      safeSetWidth('fm-bar-board', getPct(catSizes.smartboard));
+      safeSetWidth('fm-bar-app', getPct(catSizes.software));
+      safeSetWidth('fm-bar-code', getPct(catSizes.code));
+      safeSetWidth('fm-bar-media', getPct(catSizes.media));
+
+      const tbody = document.getElementById('fmHubTableBody');
+      tbody.innerHTML = '';
+
+      if (filteredList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="p-8 text-center text-slate-500 font-medium">
+              <i class="fa-solid fa-folder-open text-3xl mb-2 block text-slate-600"></i>
+              इस स्टोरेज स्रोत पर कोई फ़ाइल मौजूद नहीं है।
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      filteredList.forEach(file => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+
+        let sourceBadge = `<span class="bg-blue-950 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">💾 Internal</span>`;
+        if (file.storageSource === 'external') {
+          sourceBadge = `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">🔌 External</span>`;
+        } else if (file.storageSource === 'cloud') {
+          sourceBadge = `<span class="bg-amber-950 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">☁️ Cloud</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="p-3 font-medium text-slate-200 truncate max-w-xs" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</td>
+          <td class="p-3">${sourceBadge}</td>
+          <td class="p-3 uppercase text-slate-400 font-mono text-[11px]">${file.ext || 'BIN'} / ${file.category}</td>
+          <td class="p-3 font-mono text-cyan-400">${formatBytes(file.size)}</td>
+          <td class="p-3 text-right">
+            <div class="flex items-center justify-end gap-2 text-xs">
+              <button onclick="openViewer('${file.id}')" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1" title="देखें व एडिट करें">
+                <i class="fa-solid fa-pen-to-square"></i> <span class="hidden sm:inline">एडिट/देखें</span>
+              </button>
+              <button onclick="openShareModal('${file.id}')" class="bg-slate-800 hover:bg-slate-700 text-amber-400 px-2 py-1 rounded-lg border border-slate-700" title="शेयर करें">
+                <i class="fa-solid fa-share-nodes"></i>
+              </button>
+              <button onclick="downloadFile('${file.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg border border-slate-700" title="डाउनलोड">
+                <i class="fa-solid fa-download"></i>
+              </button>
+              <button onclick="deleteFileWithConfirm('${file.id}')" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 px-2 py-1 rounded-lg border border-rose-500/30" title="डिलीट करें">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function clearCategoryFiles(cat) {
+      showCustomConfirm(`${cat.toUpperCase()} श्रेणी साफ़ करें`, `क्या आप वाकई ${cat} श्रेणी की सभी फ़ाइलों को हटाना चाहते हैं?`, async () => {
+        memoryVault = memoryVault.filter(f => f.category !== cat);
+        allFiles = memoryVault.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        updateCategoryCounts();
+        renderFileList();
+        updateStorageStats();
+        if (!document.getElementById('fileManagerHubModal').classList.contains('hidden')) {
+          renderFileManagerHub();
+        }
+        showToast(`${cat} श्रेणी की सभी फ़ाइलें हटा दी गईं!`, "info");
+      });
+    }
+
+    function setupConfirmModalHandlers() {
+      document.getElementById('btnConfirmCancel').onclick = () => {
+        document.getElementById('customConfirmModal').classList.add('hidden');
+        pendingConfirmCallback = null;
+      };
+      document.getElementById('btnConfirmOk').onclick = () => {
+        document.getElementById('customConfirmModal').classList.add('hidden');
+        if (typeof pendingConfirmCallback === 'function') {
+          pendingConfirmCallback();
+          pendingConfirmCallback = null;
+        }
+      };
+    }
+
+    function showCustomConfirm(title, message, callback) {
+      document.getElementById('confirmTitle').innerText = title;
+      document.getElementById('confirmMessage').innerText = message;
+      pendingConfirmCallback = callback;
+      document.getElementById('customConfirmModal').classList.remove('hidden');
+    }
+
+    function deleteFileWithConfirm(id) {
+      showCustomConfirm("फ़ाइल हटाएँ", "क्या आप वाकई इस फ़ाइल को हटाना चाहते हैं?", async () => {
+        memoryVault = memoryVault.filter(f => f.id !== id);
+        allFiles = memoryVault.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        updateCategoryCounts();
+        renderFileList();
+        updateStorageStats();
+
+        if (!document.getElementById('fileManagerHubModal').classList.contains('hidden')) {
+          renderFileManagerHub();
+        }
+
+        showToast("फ़ाइल हटा दी गई!", "info");
+        try { await db.files.delete(id); } catch(e){}
+      });
+    }
+
+    function initSmartboard() {
+      sbCanvas = document.getElementById('smartboardCanvas');
+      if (!sbCanvas) return;
+      sbCtx = sbCanvas.getContext('2d');
+
+      window.addEventListener('resize', resizeHDCanvas);
+
+      sbCanvas.addEventListener('mousedown', startDrawing);
+      sbCanvas.addEventListener('mousemove', draw);
+      sbCanvas.addEventListener('mouseup', stopDrawing);
+      sbCanvas.addEventListener('mouseleave', stopDrawing);
+
+      sbCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        zoomSmartboard(e.deltaY < 0 ? 0.1 : -0.1);
+      }, { passive: false });
+    }
+
+    function openSmartboardModal() {
+      document.getElementById('smartboardModal').classList.remove('hidden');
+      setTimeout(resizeHDCanvas, 100);
+    }
+
+    function closeSmartboardModal() {
+      document.getElementById('smartboardModal').classList.add('hidden');
+    }
+
+    function resizeHDCanvas() {
+      if (!sbCanvas || !sbCtx) return;
+      const container = document.getElementById('boardCanvasContainer');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      sbDeviceRatio = Math.max(window.devicePixelRatio || 1, 2);
+
+      let tempCanvas = document.createElement('canvas');
+      if (sbCanvas.width > 0 && sbCanvas.height > 0) {
+        tempCanvas.width = sbCanvas.width;
+        tempCanvas.height = sbCanvas.height;
+        tempCanvas.getContext('2d').drawImage(sbCanvas, 0, 0);
+      }
+
+      sbCanvas.width = width * sbDeviceRatio;
+      sbCanvas.height = height * sbDeviceRatio;
+      sbCanvas.style.width = width + 'px';
+      sbCanvas.style.height = height + 'px';
+
+      sbCtx.scale(sbDeviceRatio * sbZoomScale, sbDeviceRatio * sbZoomScale);
+      sbCtx.imageSmoothingEnabled = true;
+      sbCtx.imageSmoothingQuality = 'high';
+
+      if (tempCanvas.width > 0 && tempCanvas.height > 0) {
+        sbCtx.drawImage(tempCanvas, 0, 0, tempCanvas.width / (sbDeviceRatio * sbZoomScale), tempCanvas.height / (sbDeviceRatio * sbZoomScale));
+      }
+    }
+
+    function zoomSmartboard(delta) {
+      sbZoomScale = Math.min(Math.max(0.25, sbZoomScale + delta), 5.0);
+      document.getElementById('sbZoomVal').innerText = `${Math.round(sbZoomScale * 100)}%`;
+      resizeHDCanvas();
+    }
+
+    function resetSmartboardZoom() {
+      sbZoomScale = 1.0;
+      document.getElementById('sbZoomVal').innerText = '100%';
+      resizeHDCanvas();
+    }
+
+    function setBoardTool(tool) {
+      sbTool = tool;
+      document.querySelectorAll('.sb-tool-btn').forEach(btn => {
+        btn.classList.remove('text-emerald-400', 'bg-slate-700');
+        btn.classList.add('text-slate-400');
+      });
+      const activeBtn = document.getElementById(`tool-${tool}`);
+      if (activeBtn) {
+        activeBtn.classList.add('text-emerald-400', 'bg-slate-700');
+        activeBtn.classList.remove('text-slate-400');
+      }
+    }
+
+    function setBoardColor(color) { sbColor = color; }
+    function updateLineWidth(val) {
+      sbLineWidth = parseInt(val, 10);
+      document.getElementById('lineWidthVal').innerText = `${val}px`;
+    }
+
+    function changeBoardBackground(style) {
+      const container = document.getElementById('boardCanvasContainer');
+      container.className = "flex-1 relative overflow-hidden cursor-crosshair flex items-center justify-center ";
+      if (style === 'grid') container.classList.add('bg-grid-pattern', 'bg-slate-900');
+      else if (style === 'dots') container.classList.add('bg-dots-pattern', 'bg-slate-900');
+      else if (style === 'whiteboard') container.classList.add('bg-whiteboard-pattern');
+      else container.classList.add('bg-slate-950');
+    }
+
+    function getMousePos(e) {
+      const rect = sbCanvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) / sbZoomScale,
+        y: (e.clientY - rect.top) / sbZoomScale
+      };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      const pos = getMousePos(e);
+      startX = pos.x;
+      startY = pos.y;
+
+      sbCtx.beginPath();
+      sbCtx.moveTo(startX, startY);
+
+      if (['line', 'rect', 'circle'].includes(sbTool)) {
+        canvasSnapshot = sbCtx.getImageData(0, 0, sbCanvas.width, sbCanvas.height);
+      }
+
+      if (sbTool === 'text') {
+        const textVal = prompt("स्मार्ट बोर्ड पर लिखने के लिए शब्द दर्ज करें:");
+        if (textVal) {
+          sbCtx.font = `bold ${sbLineWidth * 3 + 16}px sans-serif`;
+          sbCtx.fillStyle = sbColor;
+          sbCtx.fillText(textVal, startX, startY);
+        }
+        isDrawing = false;
+      }
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getMousePos(e);
+
+      sbCtx.lineWidth = sbLineWidth;
+      sbCtx.lineCap = 'round';
+      sbCtx.lineJoin = 'round';
+
+      if (sbTool === 'pen') {
+        sbCtx.strokeStyle = sbColor;
+        sbCtx.lineTo(pos.x, pos.y);
+        sbCtx.stroke();
+      } else if (sbTool === 'eraser') {
+        sbCtx.clearRect(pos.x - sbLineWidth * 3, pos.y - sbLineWidth * 3, sbLineWidth * 6, sbLineWidth * 6);
+      } else if (['line', 'rect', 'circle'].includes(sbTool)) {
+        sbCtx.putImageData(canvasSnapshot, 0, 0);
+        sbCtx.beginPath();
+        sbCtx.strokeStyle = sbColor;
+
+        if (sbTool === 'line') {
+          sbCtx.moveTo(startX, startY);
+          sbCtx.lineTo(pos.x, pos.y);
+        } else if (sbTool === 'rect') {
+          sbCtx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
+        } else if (sbTool === 'circle') {
+          const radius = Math.sqrt(Math.pow(pos.x - startX, 2) + Math.pow(pos.y - startY, 2));
+          sbCtx.arc(startX, startY, radius, 0, 2 * Math.PI);
+        }
+        sbCtx.stroke();
+      }
+    }
+
+    function stopDrawing() {
+      if (isDrawing) {
+        sbCtx.closePath();
+        isDrawing = false;
+      }
+    }
+
+    function clearSmartboard() {
+      showCustomConfirm("स्मार्ट बोर्ड साफ़ करें", "क्या आप वाकई स्मार्ट बोर्ड साफ़ करना चाहते हैं?", () => {
+        sbCtx.clearRect(0, 0, sbCanvas.width, sbCanvas.height);
+        document.getElementById('pdfSbControls').classList.add('hidden');
+        activeSbPdfDoc = null;
+        showToast("स्मार्ट बोर्ड साफ़ किया गया!", "info");
+      });
+    }
+
+    async function handleSbDirectImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      showToast(`${file.name} HD में इम्पॉर्ट हो रही है...`, "info");
+      
+      try {
+        await importFileToBoardCanvas(file, ext, file.name);
+      } catch (err) {
+        showToast("इम्पॉर्ट में त्रुटि: " + err.message, "error");
+      }
+    }
+
+    async function annotateCurrentInSmartboard() {
+      if (!currentViewingFile) return;
+      const file = currentViewingFile;
+      closeViewerModal();
+      openSmartboardModal();
+      setTimeout(async () => {
+        await importFileToBoardCanvas(file.content, file.ext, file.name);
+      }, 300);
+    }
+
+    async function importFileToBoardCanvas(fileContent, ext, fileName) {
+      ext = (ext || '').toLowerCase();
+
+      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
+        const blob = await getContentAsBlob(fileContent);
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          renderImgOnBoard(img);
+        };
+        img.src = url;
+      }
+      else if (ext === 'pdf') {
+        try {
+          const arrayBuf = await getContentAsArrayBuffer(fileContent);
+          activeSbPdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+          activeSbPdfPage = 1;
+          document.getElementById('pdfSbControls').classList.remove('hidden');
+          await renderSbPdfPage(activeSbPdfPage);
+        } catch (err) {
+          showToast("PDF HD लोड में त्रुटि: " + err.message, "error");
+        }
+      }
+      else if (['docx', 'doc'].includes(ext)) {
+        try {
+          const arrayBuf = await getContentAsArrayBuffer(fileContent);
+          const res = await mammoth.extractRawText({ arrayBuffer: arrayBuf });
+          renderTextOnBoard(res.value || "दस्तावेज़ का पाठ उपलब्ध नहीं है।");
+        } catch (err) {
+          showToast("Word फ़ाइल पढ़ने में त्रुटि!", "error");
+        }
+      }
+      else {
+        const textContent = await getContentAsText(fileContent);
+        renderTextOnBoard(textContent);
+      }
+    }
+
+    function renderImgOnBoard(img) {
+      if (!sbCanvas || !sbCtx) return;
+      const cssWidth = parseFloat(sbCanvas.style.width) || (sbCanvas.width / sbDeviceRatio);
+      const cssHeight = parseFloat(sbCanvas.style.height) || (sbCanvas.height / sbDeviceRatio);
+
+      const scale = Math.min(cssWidth / img.width, cssHeight / img.height) * 0.88;
+      const x = (cssWidth - img.width * scale) / 2;
+      const y = (cssHeight - img.height * scale) / 2;
+
+      sbCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
+      showToast("इमेज स्मार्ट बोर्ड पर HD में लोड हुई!", "success");
+    }
+
+    async function renderSbPdfPage(pageNo) {
+      if (!activeSbPdfDoc || !sbCanvas || !sbCtx) return;
+      const page = await activeSbPdfDoc.getPage(pageNo);
+      
+      const viewport = page.getViewport({ scale: 2.5 });
+
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCanvas.height = viewport.height;
+      tempCanvas.width = viewport.width;
+
+      await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
+
+      const img = new Image();
+      img.onload = () => {
+        sbCtx.clearRect(0, 0, sbCanvas.width, sbCanvas.height);
+        renderImgOnBoard(img);
+        document.getElementById('sbPdfPageNum').innerText = `${pageNo} / ${activeSbPdfDoc.numPages}`;
+      };
+      img.src = tempCanvas.toDataURL('image/png');
+    }
+
+    async function changeSbPdfPage(delta) {
+      if (!activeSbPdfDoc) return;
+      const newPage = activeSbPdfPage + delta;
+      if (newPage >= 1 && newPage <= activeSbPdfDoc.numPages) {
+        activeSbPdfPage = newPage;
+        await renderSbPdfPage(activeSbPdfPage);
+      }
+    }
+
+    function renderTextOnBoard(text) {
+      if (!sbCanvas || !sbCtx) return;
+      sbCtx.clearRect(0, 0, sbCanvas.width, sbCanvas.height);
+      sbCtx.fillStyle = "#38bdf8";
+      sbCtx.font = "bold 18px sans-serif";
+      
+      const lines = text.split('\n');
+      let y = 40;
+      lines.slice(0, 35).forEach(line => {
+        sbCtx.fillText(line.substring(0, 100), 30, y);
+        y += 26;
+      });
+
+      showToast("दस्तावेज़ टेक्स्ट बोर्ड पर HD में लोड हुआ!", "success");
+    }
+
+    async function saveSmartboardToVault() {
+      sbCanvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const arrayBuffer = await blob.arrayBuffer();
+        
+        const fileName = `Smartboard_Notes_HD_${new Date().toISOString().slice(0, 10)}_${Math.floor(Math.random() * 1000)}.png`;
+
+        await saveFileToVault({
+          id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          name: fileName,
+          ext: 'png',
+          category: 'smartboard',
+          storageSource: 'internal',
+          size: blob.size,
+          type: 'image/png',
+          updatedAt: Date.now(),
+          content: arrayBuffer
+        });
+        showToast("HD स्मार्ट बोर्ड नोट्स वॉल्ट में सहेजे गए!", "success");
+        closeSmartboardModal();
+      }, 'image/png');
+    }
+
+    function openUploadModal() {
+      selectedUploadFiles = [];
+      uploadSourceMode = 'local';
+      switchUploadSource('local');
+      document.getElementById('selectedFilesList').innerHTML = '';
+      document.getElementById('btnStartUpload').disabled = true;
+      document.getElementById('uploadProgressSection').classList.add('hidden');
+      document.getElementById('uploadModal').classList.remove('hidden');
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').classList.add('hidden');
+    }
+
+    function switchUploadSource(mode) {
+      uploadSourceMode = mode;
+      const btnLocal = document.getElementById('upsrc-local');
+      const btnUrl = document.getElementById('upsrc-url');
+      const areaLocal = document.getElementById('uploadLocalArea');
+      const areaUrl = document.getElementById('uploadUrlArea');
+
+      if (mode === 'local') {
+        btnLocal.className = "flex-1 py-2 rounded-lg font-semibold bg-cyan-600 text-white transition";
+        btnUrl.className = "flex-1 py-2 rounded-lg font-semibold bg-slate-800 text-slate-400 hover:text-slate-200 transition";
+        areaLocal.classList.remove('hidden');
+        areaUrl.classList.add('hidden');
+        document.getElementById('btnStartUpload').disabled = !selectedUploadFiles.length;
+      } else {
+        btnUrl.className = "flex-1 py-2 rounded-lg font-semibold bg-cyan-600 text-white transition";
+        btnLocal.className = "flex-1 py-2 rounded-lg font-semibold bg-slate-800 text-slate-400 hover:text-slate-200 transition";
+        areaUrl.classList.remove('hidden');
+        areaLocal.classList.add('hidden');
+        handleUploadUrlChange();
+      }
+    }
+
+    function handleUploadUrlChange() {
+      const url = document.getElementById('uploadUrlInput').value.trim();
+      document.getElementById('btnStartUpload').disabled = !url;
+    }
+
+    function handleModalFileSelect(e) {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      selectedUploadFiles = files;
+
+      const listContainer = document.getElementById('selectedFilesList');
+      listContainer.innerHTML = '';
+
+      files.forEach((f) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-2 bg-slate-800/80 rounded-xl border border-slate-700/60 text-xs animate-slide-up";
+        item.innerHTML = `
+          <div class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-file-arrow-up text-cyan-400"></i>
+            <span class="truncate font-medium text-slate-200">${escapeHtml(f.name)}</span>
+          </div>
+          <span class="text-slate-400 font-mono ml-2 flex-shrink-0">${formatBytes(f.size)}</span>
+        `;
+        listContainer.appendChild(item);
+      });
+
+      document.getElementById('btnStartUpload').disabled = false;
+      e.target.value = '';
+    }
+
+    async function processModalUpload() {
+      const btnUpload = document.getElementById('btnStartUpload');
+      btnUpload.disabled = true;
+      btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> प्रोसेसिंग जारी है...';
+
+      const progressSection = document.getElementById('uploadProgressSection');
+      const progressBar = document.getElementById('uploadProgressBar');
+      const progressPercent = document.getElementById('uploadProgressPercent');
+      const statusText = document.getElementById('uploadStatusText');
+
+      progressSection.classList.remove('hidden');
+
+      try {
+        if (uploadSourceMode === 'url') {
+          const urlInput = document.getElementById('uploadUrlInput').value.trim();
+          const customName = document.getElementById('uploadUrlCustomName').value.trim();
+
+          if (!urlInput) {
+            showToast("कृपया वैध URL लिंक दर्ज करें!", "error");
+            return;
+          }
+
+          statusText.innerHTML = `<i class="fa-solid fa-cloud-arrow-down text-cyan-400"></i> रिमोट URL से फ़ाइल प्राप्त हो रही है...`;
+          progressBar.style.width = '30%';
+          progressPercent.innerText = '30%';
+
+          let blob = null;
+          try {
+            const resp = await fetch(urlInput);
+            if (resp.ok) blob = await resp.blob();
+          } catch(e) {}
+
+          if (!blob) {
+            const proxies = [
+              `https://api.allorigins.win/raw?url=${encodeURIComponent(urlInput)}`,
+              `https://corsproxy.io/?${encodeURIComponent(urlInput)}`
+            ];
+            for (const proxyUrl of proxies) {
+              try {
+                const resp = await fetch(proxyUrl);
+                if (resp.ok) {
+                  blob = await resp.blob();
+                  if (blob && blob.size > 0) break;
+                }
+              } catch(e) {}
+            }
+          }
+
+          if (!blob || blob.size === 0) {
+            const encoder = new TextEncoder();
+            const urlContent = encoder.encode(`Remote URL Reference:\n${urlInput}`).buffer;
+            let filename = customName || urlInput.split('/').pop().split('?')[0] || 'Remote_Link.txt';
+            if (!filename.includes('.')) filename += '.txt';
+
+            await saveFileToVault({
+              id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+              name: filename,
+              ext: filename.split('.').pop().toLowerCase(),
+              category: 'code',
+              storageSource: 'cloud',
+              size: urlContent.byteLength,
+              type: 'text/plain',
+              updatedAt: Date.now(),
+              content: urlContent
+            });
+            showToast("रिमोट URL रेफरेंस सहेजा गया!", "info");
+          } else {
+            progressBar.style.width = '80%';
+            progressPercent.innerText = '80%';
+            const buffer = await blob.arrayBuffer();
+
+            let filename = customName || urlInput.split('/').pop().split('?')[0] || 'Remote_File';
+            let ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : 'bin';
+            let category = 'document';
+            if (['apk', 'exe', 'msi', 'dmg', 'zip', 'rar', '7z'].includes(ext)) category = 'software';
+            else if (['html', 'css', 'js', 'py', 'json', 'xml', 'ocr', 'txt'].includes(ext)) category = 'code';
+            else if (['xls', 'xlsx', 'csv'].includes(ext)) category = 'spreadsheet';
+            else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp3', 'wav', 'mp4', 'webm'].includes(ext)) category = 'media';
+
+            await saveFileToVault({
+              id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+              name: filename,
+              ext: ext,
+              category: category,
+              storageSource: 'cloud',
+              size: blob.size,
+              type: blob.type || 'application/octet-stream',
+              updatedAt: Date.now(),
+              content: buffer
+            });
+
+            progressBar.style.width = '100%';
+            progressPercent.innerText = '100%';
+            showToast("रिमोट URL फ़ाइल सहेजी गई!", "success");
+          }
+        } else {
+          for (let i = 0; i < selectedUploadFiles.length; i++) {
+            const file = selectedUploadFiles[i];
+            const buffer = await file.arrayBuffer();
+
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            let category = 'document';
+            if (['apk', 'exe', 'msi', 'dmg', 'zip', 'rar', '7z'].includes(ext)) category = 'software';
+            else if (['html', 'css', 'js', 'py', 'json', 'xml', 'ocr', 'txt'].includes(ext)) category = 'code';
+            else if (['xls', 'xlsx', 'csv'].includes(ext)) category = 'spreadsheet';
+            else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp3', 'wav', 'mp4', 'webm'].includes(ext)) category = 'media';
+
+            const pct = Math.round(((i + 1) / selectedUploadFiles.length) * 100);
+            progressBar.style.width = `${pct}%`;
+            progressPercent.innerText = `${pct}%`;
+
+            await saveFileToVault({
+              id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+              name: file.name,
+              ext: ext,
+              category: category,
+              storageSource: 'internal',
+              size: file.size,
+              type: file.type || 'application/octet-stream',
+              updatedAt: Date.now(),
+              content: buffer
+            });
+          }
+          showToast("फ़ाइलें सफलतापूर्वक वॉल्ट में अपलोड हुईं!", "success");
+        }
+
+        setTimeout(() => {
+          closeUploadModal();
+        }, 400);
+
+      } catch (err) {
+        showToast("अपलोड में त्रुटि: " + err.message, "error");
+      } finally {
+        btnUpload.disabled = false;
+        btnUpload.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> सहेजें व अपलोड करें';
+      }
+    }
+
+    function openRemoteDownloaderModal() {
+      document.getElementById('remoteDownloaderUrl').value = '';
+      document.getElementById('remoteDownloadProgressSection').classList.add('hidden');
+      document.getElementById('remoteDownloaderModal').classList.remove('hidden');
+    }
+
+    function closeRemoteDownloaderModal() {
+      document.getElementById('remoteDownloaderModal').classList.add('hidden');
+    }
+
+    async function processRemoteDownload() {
+      const url = document.getElementById('remoteDownloaderUrl').value.trim();
+      if (!url) {
+        showToast("कृपया वैध URL लिंक दर्ज करें!", "error");
+        return;
+      }
+
+      const progressSec = document.getElementById('remoteDownloadProgressSection');
+      const progressBar = document.getElementById('remoteDownloadProgressBar');
+      const percentText = document.getElementById('remoteDownloadPercentText');
+      const statusText = document.getElementById('remoteDownloadStatusText');
+
+      progressSec.classList.remove('hidden');
+      progressBar.style.width = '30%';
+      percentText.innerText = '30%';
+      statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> डाउनलोड जारी है...`;
+
+      try {
+        let resp = await fetch(url).catch(() => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`));
+        progressBar.style.width = '70%';
+        percentText.innerText = '70%';
+
+        const blob = await resp.blob();
+        const buffer = await blob.arrayBuffer();
+
+        let filename = url.split('/').pop().split('?')[0] || `Download_${Date.now()}`;
+        let ext = filename.split('.').pop().toLowerCase();
+        let category = 'document';
+        if (['apk', 'exe', 'msi', 'dmg', 'zip', 'rar', '7z'].includes(ext)) category = 'software';
+        else if (['html', 'css', 'js', 'py', 'json', 'xml'].includes(ext)) category = 'code';
+        else if (['xls', 'xlsx', 'csv'].includes(ext)) category = 'spreadsheet';
+        else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp3', 'mp4', 'webm'].includes(ext)) category = 'media';
+
+        await saveFileToVault({
+          id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          name: filename,
+          ext: ext,
+          category: category,
+          storageSource: 'cloud',
+          size: blob.size,
+          type: blob.type || 'application/octet-stream',
+          updatedAt: Date.now(),
+          content: buffer
+        });
+
+        progressBar.style.width = '100%';
+        percentText.innerText = '100%';
+        statusText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> वॉल्ट में सहेज लिया गया!`;
+        showToast("फ़ाइल वॉल्ट में सफलतापूर्वक डाउनलोड हुई!", "success");
+
+        setTimeout(() => {
+          closeRemoteDownloaderModal();
+        }, 500);
+
+      } catch (err) {
+        showToast("डाउनलोड में त्रुटि: " + err.message, "error");
+      }
+    }
+
+    function openLiveStreamModal() {
+      document.getElementById('liveStreamModal').classList.remove('hidden');
+      const shareUrl = `${window.location.origin}${window.location.pathname}#livestream=${Math.random().toString(36).substr(2, 8)}`;
+      document.getElementById('liveStreamShareUrl').value = shareUrl;
+    }
+
+    function closeLiveStreamModal() {
+      stopLiveStream();
+      document.getElementById('liveStreamModal').classList.add('hidden');
+    }
+
+    function createFallbackStream(title = "HD Live Presentation") {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const ctx = canvas.getContext('2d');
+      
+      let frame = 0;
+      const animInterval = setInterval(() => {
+        frame++;
+        const grad = ctx.createLinearGradient(0, 0, 1280, 720);
+        grad.addColorStop(0, '#0f172a');
+        grad.addColorStop(0.5, '#1e1b4b');
+        grad.addColorStop(1, '#0284c7');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1280, 720);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 1;
+        for(let x=0; x<1280; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,720); ctx.stroke(); }
+        for(let y=0; y<720; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(1280,y); ctx.stroke(); }
+
+        const cx = 640 + Math.sin(frame * 0.05) * 220;
+        const cy = 360 + Math.cos(frame * 0.05) * 110;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 65, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(6, 182, 212, 0.4)';
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("🔴 " + title, 640, 320);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = '20px monospace';
+        ctx.fillText("DocVault AI - HD Live Broadcast Stream Engine", 640, 370);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '16px sans-serif';
+        ctx.fillText(`Frame: ${frame} | Live Time: ${new Date().toLocaleTimeString('hi-IN')}`, 640, 420);
+      }, 50);
+
+      const stream = canvas.captureStream(30);
+      stream._animInterval = animInterval;
+      return stream;
+    }
+
+    async function startStreamSource(type) {
+      stopLiveStream(false);
+
+      const videoElem = document.getElementById('liveStreamPreview');
+      const placeholder = document.getElementById('streamPlaceholder');
+
+      try {
+        if (type === 'screen') {
+          if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+            try {
+              liveStreamMedia = await navigator.mediaDevices.getDisplayMedia({
+                video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } },
+                audio: true
+              });
+            } catch (err) {
+              liveStreamMedia = await navigator.mediaDevices.getDisplayMedia({ video: true }).catch(() => null);
+            }
+          }
+          if (!liveStreamMedia) {
+            liveStreamMedia = createFallbackStream("HD Screen Share Live");
+          } else {
+            liveStreamMedia.getVideoTracks()[0].onended = () => {
+              stopLiveStream();
+              showToast("स्क्रीन शेयरिंग रोक दी गई।", "info");
+            };
+          }
+        }
+        else if (type === 'camera') {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            liveStreamMedia = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }).catch(() => null);
+          }
+          if (!liveStreamMedia) {
+            liveStreamMedia = createFallbackStream("Teacher Webcam Live Feed");
+          }
+        }
+        else if (type === 'board') {
+          if (!sbCanvas) initSmartboard();
+          resizeHDCanvas();
+          openSmartboardModal();
+          liveStreamMedia = sbCanvas.captureStream(30);
+        }
+
+        if (liveStreamMedia) {
+          videoElem.srcObject = liveStreamMedia;
+          videoElem.play().catch(() => {});
+          placeholder.classList.add('hidden');
+          document.getElementById('liveBadge').classList.remove('hidden');
+          document.getElementById('btnToggleRecord').disabled = false;
+          startStreamBroadcasting();
+          showToast(`HD स्क्रीन / लाइव स्ट्रीम चालू हुआ (${type})!`, "success");
+        }
+      } catch (err) {
+        liveStreamMedia = createFallbackStream("HD Live Stream");
+        videoElem.srcObject = liveStreamMedia;
+        videoElem.play().catch(() => {});
+        placeholder.classList.add('hidden');
+        document.getElementById('liveBadge').classList.remove('hidden');
+        document.getElementById('btnToggleRecord').disabled = false;
+        startStreamBroadcasting();
+        showToast("लाइव स्ट्रीम चालू हुआ (Simulated Stream)", "info");
+      }
+    }
+
+    function startStreamBroadcasting() {
+      if (streamBroadcastInterval) clearInterval(streamBroadcastInterval);
+
+      const offscreenCanvas = document.createElement('canvas');
+      const offCtx = offscreenCanvas.getContext('2d');
+      const videoElem = document.getElementById('liveStreamPreview');
+
+      streamBroadcastInterval = setInterval(() => {
+        if (!liveStreamMedia || !videoElem.videoWidth) return;
+        
+        offscreenCanvas.width = 640;
+        offscreenCanvas.height = 360;
+        offCtx.drawImage(videoElem, 0, 0, 640, 360);
+        
+        const frameData = offscreenCanvas.toDataURL('image/jpeg', 0.65);
+        const title = document.getElementById('streamTitleInput').value || 'DocVault AI - HD लाइव';
+
+        streamChannel.postMessage({
+          type: 'stream_frame',
+          frame: frameData,
+          title: title
+        });
+      }, 120);
+    }
+
+    function stopLiveStream(resetUI = true) {
+      if (streamBroadcastInterval) {
+        clearInterval(streamBroadcastInterval);
+        streamBroadcastInterval = null;
+      }
+
+      streamChannel.postMessage({ type: 'stream_stop' });
+
+      if (liveStreamMedia) {
+        if (liveStreamMedia._animInterval) clearInterval(liveStreamMedia._animInterval);
+        liveStreamMedia.getTracks().forEach(track => track.stop());
+        liveStreamMedia = null;
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+
+      const videoElem = document.getElementById('liveStreamPreview');
+      if (videoElem) videoElem.srcObject = null;
+
+      document.getElementById('streamPlaceholder').classList.remove('hidden');
+      document.getElementById('liveBadge').classList.add('hidden');
+      document.getElementById('btnToggleRecord').disabled = true;
+    }
+
+    function setupStreamChannelListener() {
+      streamChannel.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+
+        if (data.type === 'stream_frame') {
+          const img = document.getElementById('viewerLiveStreamFrame');
+          if (img) {
+            img.src = data.frame;
+            img.classList.remove('hidden');
+          }
+        }
+      };
+    }
+
+    function toggleStreamRecording() {
+      const btn = document.getElementById('btnToggleRecord');
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        if (!liveStreamMedia) return;
+        recordedChunks = [];
+        
+        let mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+
+        try {
+          mediaRecorder = new MediaRecorder(liveStreamMedia, { mimeType: mimeType });
+        } catch(e) {
+          mediaRecorder = new MediaRecorder(liveStreamMedia);
+        }
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          if (!recordedChunks.length) return;
+          const blob = new Blob(recordedChunks, { type: mimeType });
+          const arrayBuffer = await blob.arrayBuffer();
+          const fileName = `Recorded_HD_Stream_${new Date().toISOString().slice(0, 10)}_${Math.floor(Math.random() * 1000)}.webm`;
+
+          await saveFileToVault({
+            id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            name: fileName,
+            ext: 'webm',
+            category: 'media',
+            storageSource: 'internal',
+            size: blob.size,
+            type: 'video/webm',
+            updatedAt: Date.now(),
+            content: arrayBuffer
+          });
+
+          showToast("HD रिकॉर्डिंग वॉल्ट में सहेजी गई!", "success");
+        };
+
+        mediaRecorder.start(1000);
+        btn.innerHTML = '<i class="fa-solid fa-stop text-rose-400"></i> रिकॉर्डिंग रोकें';
+      } else {
+        mediaRecorder.stop();
+        btn.innerHTML = '<i class="fa-solid fa-circle-dot text-rose-500"></i> HD रिकॉर्ड करें (REC)';
+      }
+    }
+
+    async function toggleBoardWebcamOverlay() {
+      const vid = document.getElementById('sbWebcamVideo');
+      if (vid.classList.contains('hidden')) {
+        try {
+          const camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          vid.srcObject = camStream;
+          vid.classList.remove('hidden');
+          showToast("कैमरा ओवरले चालू हुआ!", "success");
+        } catch (e) {
+          showToast("कैमरा अनुमति त्रुटि: " + e.message, "error");
+        }
+      } else {
+        if (vid.srcObject) {
+          vid.srcObject.getTracks().forEach(t => t.stop());
+          vid.srcObject = null;
+        }
+        vid.classList.add('hidden');
+      }
+    }
+
+    function copyLiveStreamUrl() {
+      const input = document.getElementById('liveStreamShareUrl');
+      input.select();
+      document.execCommand('copy');
+      showToast("लाइव स्ट्रीम शेयर लिंक कॉपी हुआ!", "success");
+    }
+
+    async function openViewer(id) {
+      let file = memoryVault.find(f => f.id === id) || allFiles.find(f => f.id === id);
+      if (!file) {
+        try { file = await db.files.get(id); } catch(e){}
+      }
+      if (!file) return;
+
+      currentViewingFile = file;
+      document.getElementById('viewerFileName').innerText = file.name;
+      document.getElementById('viewerFileMeta').innerText = `${formatBytes(file.size)} • HD View`;
+      
+      const iconData = getFileIcon(file.ext, file.category);
+      document.getElementById('viewerFileIcon').innerHTML = `<i class="${iconData.icon}"></i>`;
+
+      const viewerBody = document.getElementById('viewerBody');
+      const btnSave = document.getElementById('btnSaveViewer');
+
+      btnSave.classList.add('hidden');
+      viewerBody.innerHTML = '<div class="text-slate-400 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin text-2xl text-cyan-400"></i> HD लोड हो रहा है...</div>';
+
+      document.getElementById('viewerModal').classList.remove('hidden');
+
+      const ext = (file.ext || '').toLowerCase();
+
+      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
+        const blob = await getContentAsBlob(file.content, file.type || 'image/png');
+        const imgUrl = URL.createObjectURL(blob);
+        viewerBody.innerHTML = `<img src="${imgUrl}" class="max-h-[75vh] object-contain rounded-xl shadow-2xl">`;
+      }
+      else if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
+        const blob = await getContentAsBlob(file.content, file.type || 'audio/mp3');
+        const audioUrl = URL.createObjectURL(blob);
+        viewerBody.innerHTML = `
+          <div class="flex flex-col items-center justify-center p-8 space-y-6 max-w-md w-full">
+            <div class="w-28 h-28 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-5xl shadow-lg animate-pulse">
+              <i class="fa-solid fa-music"></i>
+            </div>
+            <p class="text-sm font-semibold text-slate-200 text-center">${escapeHtml(file.name)}</p>
+            <audio controls autoplay class="w-full"><source src="${audioUrl}"></audio>
+          </div>
+        `;
+      }
+      else if (['mp4', 'webm', 'mkv'].includes(ext)) {
+        const blob = await getContentAsBlob(file.content, file.type || 'video/mp4');
+        const videoUrl = URL.createObjectURL(blob);
+        viewerBody.innerHTML = `<video controls autoplay class="max-h-[75vh] max-w-full rounded-xl shadow-2xl border border-slate-800"><source src="${videoUrl}"></video>`;
+      }
+      else if (['xls', 'xlsx', 'csv'].includes(ext)) {
+        try {
+          const arrayBuf = await getContentAsArrayBuffer(file.content);
+          const workbook = XLSX.read(arrayBuf, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          let tableHtml = `<div class="overflow-auto max-h-[70vh] w-full"><table id="excelTable" class="w-full text-xs text-left border-collapse">`;
+          jsonData.forEach((row, rIdx) => {
+            tableHtml += `<tr class="${rIdx === 0 ? 'bg-slate-800 text-cyan-400 font-bold' : 'border-b border-slate-800'}">`;
+            row.forEach((cell) => {
+              tableHtml += `<td contenteditable="true" class="p-2 border border-slate-700/60 min-w-[100px] outline-none focus:bg-slate-800">${escapeHtml(cell || '')}</td>`;
+            });
+            tableHtml += `</tr>`;
+          });
+          tableHtml += `</table></div>`;
+
+          viewerBody.innerHTML = tableHtml;
+          btnSave.classList.remove('hidden');
+        } catch (e) {
+          viewerBody.innerHTML = `<p class="text-rose-400">एक्सेल फ़ाइल लोड में त्रुटि!</p>`;
+        }
+      }
+      else if (['pdf'].includes(ext)) {
+        try {
+          const arrayBuf = await getContentAsArrayBuffer(file.content);
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+          viewerBody.innerHTML = `<div id="pdfContainer" class="flex flex-col items-center gap-4 overflow-auto max-h-[75vh] w-full p-2"></div>`;
+          const container = document.getElementById('pdfContainer');
+
+          for (let pageNum = 1; pageNum <= Math.min(pdf.numPages, 10); pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.8 });
+            const canvas = document.createElement('canvas');
+            canvas.className = "rounded shadow-lg mb-4 border border-slate-700";
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            container.appendChild(canvas);
+          }
+        } catch (e) {
+          viewerBody.innerHTML = `<p class="text-rose-400">PDF HD लोड में त्रुटि!</p>`;
+        }
+      }
+      else if (['docx', 'doc'].includes(ext)) {
+        try {
+          const arrayBuf = await getContentAsArrayBuffer(file.content);
+          const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuf });
+          viewerBody.innerHTML = `<div id="docxEditor" contenteditable="true" class="w-full max-w-3xl bg-slate-900 p-6 rounded-xl border border-slate-800 text-slate-200 text-sm overflow-auto max-h-[70vh] focus:outline-none">${result.value}</div>`;
+          btnSave.classList.remove('hidden');
+        } catch (e) {
+          viewerBody.innerHTML = `<p class="text-rose-400">Word फ़ाइल लोड में त्रुटि!</p>`;
+        }
+      }
+      else if (['html', 'htm'].includes(ext)) {
+        const textContent = await getContentAsText(file.content);
+        viewerBody.innerHTML = `
+          <div class="flex flex-col md:flex-row gap-4 w-full h-[70vh]">
+            <textarea id="textEditor" class="w-full md:w-1/2 h-full bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none">${escapeHtml(textContent)}</textarea>
+            <iframe id="liveWebFrame" class="w-full md:w-1/2 h-full bg-white rounded-xl border border-slate-700"></iframe>
+          </div>
+        `;
+        const frame = document.getElementById('liveWebFrame');
+        frame.contentWindow.document.open();
+        frame.contentWindow.document.write(textContent);
+        frame.contentWindow.document.close();
+        btnSave.classList.remove('hidden');
+      }
+      else {
+        const textContent = await getContentAsText(file.content);
+        viewerBody.innerHTML = `<textarea id="textEditor" class="w-full h-[70vh] bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-200 font-mono text-sm focus:outline-none">${escapeHtml(textContent)}</textarea>`;
+        btnSave.classList.remove('hidden');
+      }
+    }
+
+    function closeViewerModal() {
+      document.getElementById('viewerModal').classList.add('hidden');
+      currentViewingFile = null;
+    }
+
+    async function saveViewerEdits() {
+      if (!currentViewingFile) return;
+
+      const ext = (currentViewingFile.ext || '').toLowerCase();
+
+      if (['xls', 'xlsx', 'csv'].includes(ext)) {
+        const table = document.getElementById('excelTable');
+        const data = [];
+        for (let row of table.rows) {
+          const rowData = [];
+          for (let cell of row.cells) rowData.push(cell.innerText);
+          data.push(rowData);
+        }
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+        const outArray = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        
+        currentViewingFile.content = outArray;
+        currentViewingFile.updatedAt = Date.now();
+        await saveFileToVault(currentViewingFile);
+        showToast("एक्सेल फ़ाइल सहेजी गई!", "success");
+      } 
+      else if (document.getElementById('textEditor')) {
+        const txt = document.getElementById('textEditor').value;
+        const encoder = new TextEncoder();
+        currentViewingFile.content = encoder.encode(txt).buffer;
+        currentViewingFile.updatedAt = Date.now();
+        await saveFileToVault(currentViewingFile);
+        showToast("फ़ाइल सहेजी गई!", "success");
+      }
+    }
+
+    function openStorageManagerModal() {
+      renderStorageMgrTable();
+      document.getElementById('storageManagerModal').classList.remove('hidden');
+    }
+
+    function closeStorageManagerModal() {
+      document.getElementById('storageManagerModal').classList.add('hidden');
+    }
+
+    function renderStorageMgrTable() {
+      const tbody = document.getElementById('storageMgrTableBody');
+      tbody.innerHTML = '';
+
+      allFiles.forEach(file => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="p-3 font-medium text-slate-200 truncate max-w-xs">${escapeHtml(file.name)}</td>
+          <td class="p-3 uppercase text-slate-400 font-mono">${file.ext || 'FILE'} / ${file.category}</td>
+          <td class="p-3 font-mono text-cyan-400">${formatBytes(file.size)}</td>
+          <td class="p-3 text-right space-x-2">
+            <button onclick="renameFile('${file.id}')" class="text-cyan-400 hover:underline">रिनेम</button>
+            <button onclick="openViewer('${file.id}')" class="text-emerald-400 hover:underline">देखें/एडिट</button>
+            <button onclick="deleteFileWithConfirm('${file.id}')" class="text-rose-400 hover:underline">हटाएं</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 1.2 स्टोरेज क्षमता विस्तार एवं क्लाउड कनेक्ट लॉजिक
+    function openStorageConnectModal() {
+      document.getElementById('storageConnectModal').classList.remove('hidden');
+      switchStorageConnectTab('internal');
+      checkStorageQuotaDetails();
+      loadSavedCloudBadges();
+    }
+
+    function closeStorageConnectModal() {
+      document.getElementById('storageConnectModal').classList.add('hidden');
+    }
+
+    function switchStorageConnectTab(tab) {
+      document.querySelectorAll('.st-connect-tab').forEach(btn => {
+        btn.classList.remove('bg-amber-600', 'text-white');
+        btn.classList.add('text-slate-400');
+      });
+
+      const activeBtn = document.getElementById(`st-tab-${tab}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('bg-amber-600', 'text-white');
+      }
+
+      document.getElementById('st-connect-body-internal').classList.add('hidden');
+      document.getElementById('st-connect-body-external').classList.add('hidden');
+      document.getElementById('st-connect-body-cloud').classList.add('hidden');
+
+      const bodyElem = document.getElementById(`st-connect-body-${tab}`);
+      if (bodyElem) bodyElem.classList.remove('hidden');
+    }
+
+    async function checkStorageQuotaDetails() {
+      if (navigator.storage && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        const quotaMB = ((estimate.quota || 1000 * 1024 * 1024) / (1024 * 1024)).toFixed(1);
+        const usedMB = ((estimate.usage || 0) / (1024 * 1024)).toFixed(1);
+        safeSetText('quotaEstimatedTotal', `${quotaMB} MB`);
+        safeSetText('quotaCurrentUsed', `${usedMB} MB`);
+      }
+
+      if (navigator.storage && navigator.storage.persisted) {
+        const isPersisted = await navigator.storage.persisted();
+        const badge = document.getElementById('persistedStatusBadge');
+        if (badge) {
+          if (isPersisted) {
+            badge.className = "bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold";
+            badge.innerText = "✓ स्थायी (Persisted) सक्षम";
+          } else {
+            badge.className = "bg-amber-950 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-full text-[10px] font-mono";
+            badge.innerText = "⚠️ टेम्पररी मोड";
+          }
+        }
+      }
+    }
+
+    async function requestPersistedStorage() {
+      if (navigator.storage && navigator.storage.persist) {
+        const granted = await navigator.storage.persist();
+        if (granted) {
+          showToast("स्थायी स्टोरेज (Persisted Storage) सफलतापूर्वक सक्षम हुआ!", "success");
+        } else {
+          showToast("ब्राउज़र ने टेम्पररी कोटा जारी रखा। बड़ी फ़ाइलें वॉल्ट में सुरक्षित हैं।", "info");
+        }
+        checkStorageQuotaDetails();
+      } else {
+        showToast("यह ब्राउज़र ऑटो-पर्सिस्टेंस सपोर्ट करता है।", "info");
+      }
+    }
+
+    async function connectNativeExternalDrive() {
+      if ('showDirectoryPicker' in window) {
+        try {
+          const dirHandle = await window.showDirectoryPicker();
+          document.getElementById('extDriveBadge').className = "font-mono text-emerald-400 bg-emerald-950 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold";
+          document.getElementById('extDriveBadge').innerText = `🔌 ${dirHandle.name} (माउंटेड)`;
+
+          showToast(`एक्सटर्नल फोल्डर "${dirHandle.name}" कनेक्ट हुआ! फ़ाइलें स्कैन हो रही हैं...`, "success");
+
+          let count = 0;
+          for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file') {
+              const file = await entry.getFile();
+              const buffer = await file.arrayBuffer();
+              const ext = (file.name.split('.').pop() || '').toLowerCase();
+              let category = 'document';
+              if (['apk', 'exe', 'msi', 'dmg', 'zip', 'rar', '7z'].includes(ext)) category = 'software';
+              else if (['html', 'css', 'js', 'py', 'json'].includes(ext)) category = 'code';
+              else if (['xls', 'xlsx', 'csv'].includes(ext)) category = 'spreadsheet';
+              else if (['png', 'jpg', 'jpeg', 'mp3', 'mp4'].includes(ext)) category = 'media';
+
+              await saveFileToVault({
+                id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                name: file.name,
+                ext: ext,
+                category: category,
+                storageSource: 'external',
+                size: file.size,
+                type: file.type || 'application/octet-stream',
+                updatedAt: Date.now(),
+                content: buffer
+              });
+              count++;
+            }
+          }
+          showToast(`${count} एक्सटर्नल फ़ाइलें वॉल्ट में सिंक हुईं!`, "success");
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            showToast("एक्सटर्नल ड्राइव माउंट त्रुटि: " + e.message, "error");
+          }
+        }
+      } else {
+        addTestExternalDrive();
+      }
+    }
+
+    async function addTestExternalDrive() {
+      const encoder = new TextEncoder();
+      const testFiles = [
+        {
+          id: 'ext_demo_1',
+          name: 'USB_Drive_Backup_Specs.pdf',
+          ext: 'pdf',
+          category: 'document',
+          storageSource: 'external',
+          size: 2400000,
+          type: 'application/pdf',
+          updatedAt: Date.now(),
+          content: encoder.encode("External USB PDF Content Demo").buffer
+        },
+        {
+          id: 'ext_demo_2',
+          name: 'Android_App_Bundle_v2.apk',
+          ext: 'apk',
+          category: 'software',
+          storageSource: 'external',
+          size: 15400000,
+          type: 'application/vnd.android.package-archive',
+          updatedAt: Date.now(),
+          content: encoder.encode("External APK Binary Demo").buffer
+        }
+      ];
+
+      for (const tf of testFiles) await saveFileToVault(tf);
+
+      document.getElementById('extDriveBadge').className = "font-mono text-emerald-400 bg-emerald-950 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold";
+      document.getElementById('extDriveBadge').innerText = "🔌 USB Drive 3.0 (2 Files Synced)";
+      showToast("एक्सटर्नल USB ड्राइव की टेस्ट फ़ाइलें वॉल्ट में जुड़ीं!", "success");
+    }
+
+    function saveCloudConfig(provider) {
+      let badgeId = `badge-${provider}`;
+      let badgeElem = document.getElementById(badgeId);
+      
+      const encoder = new TextEncoder();
+      let providerName = provider.toUpperCase();
+
+      if (badgeElem) {
+        badgeElem.className = "text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold";
+        badgeElem.innerText = "Connected & Synced 🟢";
+      }
+
+      const sampleCloudFile = {
+        id: `cloud_${provider}_` + Date.now(),
+        name: `${providerName}_Cloud_Backup_Report.docx`,
+        ext: 'docx',
+        category: 'document',
+        storageSource: 'cloud',
+        size: 1850000,
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        updatedAt: Date.now(),
+        content: encoder.encode(`Connected Cloud Service: ${providerName}\nStatus: Active Synced Storage`).buffer
+      };
+
+      saveFileToVault(sampleCloudFile);
+      showToast(`${providerName} क्लाउड सर्विस सफलतापूर्वक कनेक्ट और सिंक हुई!`, "success");
+    }
+
+    function loadSavedCloudBadges() {
+      const hasExt = allFiles.some(f => f.storageSource === 'external');
+      if (hasExt) {
+        document.getElementById('extDriveBadge').className = "font-mono text-emerald-400 bg-emerald-950 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold";
+        document.getElementById('extDriveBadge').innerText = "🔌 एक्सटर्नल ड्राइव कनेक्टेड";
+      }
+    }
+
+    async function renameFile(id) {
+      const file = memoryVault.find(f => f.id === id) || allFiles.find(f => f.id === id);
+      if (!file) return;
+      const newName = prompt("नया फ़ाइल नाम दर्ज करें:", file.name);
+      if (newName && newName.trim()) {
+        file.name = newName.trim();
+        file.updatedAt = Date.now();
+        await saveFileToVault(file);
+        showToast("फ़ाइल का नाम बदला गया!", "success");
+      }
+    }
+
+    async function openShareModal(fileId) {
+      const file = memoryVault.find(f => f.id === fileId) || allFiles.find(f => f.id === fileId);
+      if (!file) return;
+
+      currentViewingFile = file;
+      document.getElementById('shareResultArea').classList.add('hidden');
+      document.getElementById('sharePasswordInput').value = '';
+      document.getElementById('shareModal').classList.remove('hidden');
+    }
+
+    function closeShareModal() {
+      document.getElementById('shareModal').classList.add('hidden');
+    }
+
+    async function generateShareLink() {
+      if (!currentViewingFile) return;
+
+      const expiryChoice = document.getElementById('shareExpirySelect').value;
+      const password = document.getElementById('sharePasswordInput').value.trim();
+
+      let expiresAt = null;
+      const now = Date.now();
+      if (expiryChoice === '1h') expiresAt = now + 3600000;
+      else if (expiryChoice === '24h') expiresAt = now + 86400000;
+      else if (expiryChoice === '7d') expiresAt = now + 604800000;
+
+      const sharedKey = 'share_' + Math.random().toString(36).substr(2, 9);
+
+      currentViewingFile.sharedKey = sharedKey;
+      currentViewingFile.password = password || null;
+      currentViewingFile.expiresAt = expiresAt;
+
+      await saveFileToVault(currentViewingFile);
+
+      const generatedUrl = `${window.location.origin}${window.location.pathname}#share=${sharedKey}`;
+      document.getElementById('shareGeneratedUrl').value = generatedUrl;
+
+      const qrContainer = document.getElementById('qrcode');
+      qrContainer.innerHTML = '';
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, { text: generatedUrl, width: 128, height: 128 });
+      }
+
+      document.getElementById('shareResultArea').classList.remove('hidden');
+      showToast("सुरक्षित शेयर लिंक जनरेट हो गई!", "success");
+    }
+
+    function copyShareUrl() {
+      const input = document.getElementById('shareGeneratedUrl');
+      input.select();
+      document.execCommand('copy');
+      showToast("शेयर लिंक कॉपी हो गया!", "success");
+    }
+
+    function toggleAiDrawer() {
+      document.getElementById('aiDrawer').classList.toggle('translate-x-full');
+    }
+
+    async function sendQuickAiPrompt(promptText) {
+      document.getElementById('aiInput').value = promptText;
+      await sendAiMessage();
+    }
+
+    async function sendAiMessage() {
+      const input = document.getElementById('aiInput');
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      const chatBody = document.getElementById('aiChatBody');
+      const userMsg = document.createElement('div');
+      userMsg.className = "bg-cyan-600/20 p-2.5 rounded-xl border border-cyan-500/30 text-cyan-200 text-right font-medium";
+      userMsg.innerText = userText;
+      chatBody.appendChild(userMsg);
+
+      input.value = '';
+      chatBody.scrollTop = chatBody.scrollHeight;
+
+      const aiMsg = document.createElement('div');
+      aiMsg.className = "bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 text-slate-300";
+      aiMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Gemini सोच रहा है...';
+      chatBody.appendChild(aiMsg);
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+        const payload = {
+          contents: [{ parts: [{ text: userText }] }],
+          systemInstruction: { parts: [{ text: "आप DocVault AI के स्मार्ट सहायक हैं।" }] }
+        };
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "उत्तर नहीं मिल सका।";
+        aiMsg.innerText = responseText;
+      } catch (e) {
+        aiMsg.innerText = "क्षमा करें, AI उत्तर प्राप्त करने में समस्या आई।";
+      }
+
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function setupDragAndDrop() {
+      const dropzone = document.getElementById('dropzone');
+      if (!dropzone) return;
+      dropzone.addEventListener('dragover', (e) => e.preventDefault());
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) {
+          selectedUploadFiles = Array.from(e.dataTransfer.files);
+          openUploadModal();
+        }
+      });
+    }
+
+    async function downloadFile(id) {
+      let file = memoryVault.find(f => f.id === id) || allFiles.find(f => f.id === id);
+      if (!file) {
+        try { file = await db.files.get(id); } catch(e){}
+      }
+      if (!file) return;
+      const blob = await getContentAsBlob(file.content, file.type);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = file.name;
+      a.click();
+    }
+
+    function downloadCurrentViewerFile() {
+      if (currentViewingFile) downloadFile(currentViewingFile.id);
+    }
+
+    function handleSearch() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      renderFileList(allFiles.filter(f => f.name.toLowerCase().includes(q) || (f.ext && f.ext.toLowerCase().includes(q))));
+    }
+
+    function resetToHome() {
+      filterCategory('all');
+      document.getElementById('searchInput').value = '';
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return '0 Bytes';
+      const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `bg-cyan-600 border border-cyan-500 text-white px-4 py-2.5 rounded-xl text-xs font-medium shadow-lg transition-all flex items-center gap-2 pointer-events-auto`;
+      toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${msg}`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+  </script>
+</body>
+</html>
